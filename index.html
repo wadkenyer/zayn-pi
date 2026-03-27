@@ -4,84 +4,44 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZAYN PI</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-body { background:#F8F9FA; font-family:sans-serif; }
-.card { background:#fff; border-radius:20px; box-shadow:0 5px 15px rgba(0,0,0,0.05); }
-</style>
+
+<link rel="stylesheet" href="style.css">
+<script defer src="app.js"></script>
+
 </head>
-<nav class="fixed bottom-0 w-full bg-white border-t flex justify-around p-3">
+
+<body>
+
+<header class="header">
+<h2>ZAYN PI</h2>
+</header>
+
+<input class="search" placeholder="ابحث عن صالون...">
+
+<div class="card">
+
+<img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200">
+
+<div>
+<h3>صالون الملكي</h3>
+<p>القاهرة</p>
+<p>⭐ 4.8</p>
+<span class="badge">Pi Accepted</span>
+</div>
+
+<div class="price">3 Pi</div>
+
+</div>
+
+<button onclick="book('صالون الملكي',3)" class="btn">
+احجز الآن
+</button>
+
+<nav class="nav">
 <a href="index.html">🏠</a>
 <a href="bookings.html">📅</a>
 <a href="profile.html">👤</a>
 </nav>
-<body class="p-4 pb-20">
-
-<h1 class="text-xl font-bold text-teal-600 mb-4">ZAYN PI</h1>
-
-<input placeholder="ابحث عن صالون..." class="w-full p-3 rounded-xl mb-6">
-
-<div class="space-y-4">
-
-<div class="card p-4">
-<div class="flex items-center gap-3">
-
-<img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200"
-class="w-20 h-20 rounded-lg">
-
-<div class="flex-1">
-<h3 class="font-bold">صالون الملكي</h3>
-<p class="text-sm text-gray-400">القاهرة</p>
-<p class="text-yellow-500">⭐ 4.8</p>
-<span class="text-xs bg-green-100 px-2 py-1 rounded">Pi Accepted</span>
-</div>
-
-<div class="text-teal-600 font-bold">3 Pi</div>
-
-</div>
-
-<button onclick="book('صالون الملكي',3)"
-class="w-full mt-4 py-3 bg-red-400 text-white rounded-xl font-bold">
-احجز الآن
-</button>
-</div>
-
-</div>
-
-<footer class="text-center text-gray-400 mt-10 text-sm">
-<a href="privacy-policy.html">Privacy</a> |
-<a href="terms-of-service.html">Terms</a>
-<br>© 2026 ZAYN PI
-</footer>
-
-<script>
-function book(name, price){
-localStorage.setItem("salon", name);
-localStorage.setItem("price", price);
-window.location.href = "booking.html";
-}
-</script>
-
-</body>
-</html>
-</div>
-
-<button onclick="goToBooking()"
-class="w-full mt-4 py-3 bg-red-400 text-white rounded-xl font-bold">
-احجز الآن
-</button>
-
-</div>
-
-<footer class="text-center text-gray-400 mt-10 text-sm">
-© 2026 ZAYN PI
-</footer>
-
-<script>
-function goToBooking(){
-    window.location.href = "booking.html";
-}
-</script>
 
 </body>
 </html>
