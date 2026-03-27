@@ -3,119 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZAYN PI | Book Salons with Pi</title>
+<title>ZAYN PI</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-<meta name="theme-color" content="#4DAF9F">
 
 <style>
-:root {
-    --teal: #4DAF9F;
-    --coral: #FF8A80;
-}
-body {
-    background: #F8F9FA;
-    font-family: sans-serif;
-}
-.card {
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    overflow: hidden;
-}
+body { background:#F8F9FA; font-family:sans-serif; }
+.card { background:#fff; border-radius:20px; box-shadow:0 5px 15px rgba(0,0,0,0.05); }
 </style>
 </head>
 
 <body class="p-4 pb-20">
 
-<!-- HEADER -->
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-xl font-bold text-teal-600">
-        ZAYN PI
-    </h1>
-    <i class="fas fa-user-circle text-2xl text-gray-500"></i>
+<h1 class="text-xl font-bold text-teal-600 mb-4">ZAYN PI</h1>
+
+<input placeholder="ابحث عن صالون..." class="w-full p-3 rounded-xl mb-6">
+
+<div class="card p-4">
+
+<div class="flex items-center gap-3">
+
+<img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200"
+class="w-20 h-20 rounded-lg">
+
+<div class="flex-1">
+<h3 class="font-bold">صالون الملكي</h3>
+<p class="text-sm text-gray-400">القاهرة</p>
+<p class="text-yellow-500">⭐ 4.8</p>
+<span class="text-xs bg-green-100 px-2 py-1 rounded">Pi Accepted</span>
 </div>
 
-<!-- SEARCH -->
-<div class="mb-6">
-    <input type="text" placeholder="ابحث عن صالون..."
-    class="w-full p-3 rounded-xl shadow-sm border-none">
-</div>
-
-<!-- SERVICES -->
-<div class="flex gap-4 overflow-x-auto mb-6">
-    <div class="text-center">
-        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow">
-            <i class="fas fa-cut text-teal-500"></i>
-        </div>
-        <span class="text-xs">حلاقة</span>
-    </div>
-
-    <div class="text-center">
-        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow">
-            <i class="fas fa-spa text-teal-500"></i>
-        </div>
-        <span class="text-xs">عناية</span>
-    </div>
-
-    <div class="text-center">
-        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow">
-            <i class="fas fa-magic text-teal-500"></i>
-        </div>
-        <span class="text-xs">تجميل</span>
-    </div>
-</div>
-
-<!-- SALONS -->
-<div class="space-y-4">
-
-    <!-- CARD -->
-    <div class="card">
-        <div class="flex p-4 gap-3 items-center">
-
-            <img loading="lazy"
-            src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200"
-            class="w-20 h-20 rounded-lg object-cover">
-
-            <div class="flex-1">
-                <h3 class="font-bold">صالون الملكي</h3>
-                <p class="text-sm text-gray-400">القاهرة</p>
-
-                <div class="text-yellow-500 text-sm">
-                    ⭐ 4.8
-                </div>
-
-                <span class="text-xs bg-green-100 px-2 py-1 rounded">
-                    Pi Accepted
-                </span>
-            </div>
-
-            <div class="text-teal-600 font-bold">
-                3 Pi
-            </div>
-
-        </div>
-
-        <button onclick="bookSalon('صالون الملكي',3)"
-        class="w-full py-3 text-white font-bold"
-        style="background:#FF8A80">
-        احجز الآن
-        </button>
-    </div>
+<div class="text-teal-600 font-bold">3 Pi</div>
 
 </div>
 
-<!-- FOOTER -->
+<button onclick="goToBooking()"
+class="w-full mt-4 py-3 bg-red-400 text-white rounded-xl font-bold">
+احجز الآن
+</button>
+
+</div>
+
 <footer class="text-center text-gray-400 mt-10 text-sm">
 © 2026 ZAYN PI
 </footer>
 
-<!-- SCRIPT -->
 <script>
-function bookSalon(name, price){
-    alert("تم اختيار " + name + " بسعر " + price + " Pi");
+function goToBooking(){
+    window.location.href = "booking.html";
 }
 </script>
 
