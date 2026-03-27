@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حجوزاتي</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body { background:#F8F9FA; font-family:sans-serif; }
+</style>
+</head>
+
+<body class="p-4">
+
+<h2 class="text-xl font-bold mb-4">حجوزاتي</h2>
+
+<div id="list" class="space-y-3"></div>
+
+<script>
+let bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
+
+let container = document.getElementById("list");
+
+if(bookings.length === 0){
+container.innerHTML = "<p>لا يوجد حجوزات</p>";
+}
+
+bookings.forEach(b => {
+container.innerHTML += `
+<div class="bg-white p-3 rounded-xl shadow">
+<p>${b.salon}</p>
+<p>${b.price} Pi</p>
+<p>${b.date}</p>
+</div>
+`;
+});
+</script>
+
+</body>
+</html>
