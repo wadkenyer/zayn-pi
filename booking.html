@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>تأكيد الحجز</title>
-
 <script src="https://cdn.tailwindcss.com"></script>
-
 <style>
 body { background:#F8F9FA; font-family:sans-serif; }
 </style>
@@ -17,9 +15,9 @@ body { background:#F8F9FA; font-family:sans-serif; }
 <h2 class="text-xl font-bold mb-4">تأكيد الحجز</h2>
 
 <div class="bg-white p-4 rounded-xl shadow mb-4">
-<p>الصالون: صالون الملكي</p>
+<p id="salon"></p>
 <p>الخدمة: حلاقة</p>
-<p>السعر: 3 Pi</p>
+<p id="price"></p>
 </div>
 
 <button onclick="confirmBooking()"
@@ -28,8 +26,24 @@ class="w-full py-3 bg-green-500 text-white rounded-xl font-bold">
 </button>
 
 <script>
+document.getElementById("salon").innerText =
+"الصالون: " + localStorage.getItem("salon");
+
+document.getElementById("price").innerText =
+"السعر: " + localStorage.getItem("price") + " Pi";
+
 function confirmBooking(){
-    alert("تم الحجز بنجاح ✅");
+let bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
+
+bookings.push({
+salon: localStorage.getItem("salon"),
+price: localStorage.getItem("price"),
+date: new Date().toLocaleString()
+});
+
+localStorage.setItem("bookings", JSON.stringify(bookings));
+
+window.location.href = "bookings.html";
 }
 </script>
 
