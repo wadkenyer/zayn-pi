@@ -1,142 +1,164 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ZAYN PI | زين باي</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZAYN PI</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
-    <style>
-        :root { --teal: #4DAF9F; --coral: #FF8A80; --beige: #F8F9FA; }
-        body { background: var(--beige); font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
-        .card { background: #fff; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); overflow: hidden; border: 1px solid rgba(0,0,0,0.02); transition: 0.3s; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #eee; display: flex; justify-content: space-around; padding: 12px; z-index: 100; }
-        .btn-loading { pointer-events: none; opacity: 0.7; }
-    </style>
+<style>
+:root { --teal:#4DAF9F; --coral:#FF8A80; --bg:#F8F9FA; }
+
+body {
+ background:var(--bg);
+ font-family:sans-serif;
+}
+
+.card {
+ background:#fff;
+ border-radius:20px;
+ box-shadow:0 8px 20px rgba(0,0,0,0.04);
+ overflow:hidden;
+ margin-bottom:15px;
+}
+
+.bottom-nav {
+ position:fixed;
+ bottom:0;
+ width:100%;
+ background:#fff;
+ display:flex;
+ justify-content:space-around;
+ padding:12px;
+ border-top:1px solid #eee;
+}
+
+.btn-loading {
+ opacity:0.7;
+ pointer-events:none;
+}
+</style>
 </head>
 
 <body class="p-4 pb-24">
 
+<!-- HEADER -->
 <div class="flex justify-between items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-black text-teal-600 tracking-tight">ZAYN PI</h1>
-        <p id="user-greeting" class="text-xs text-gray-400">جاري التحقق من الهوية...</p>
-    </div>
-    <div id="user-pfp" class="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center overflow-hidden border-2 border-teal-500">
-        <i class="fas fa-user text-teal-200"></i>
-    </div>
+ <div>
+  <h1 class="text-2xl font-black text-teal-600">ZAYN PI</h1>
+  <p id="user-greeting" class="text-xs text-gray-400">جاري التحقق...</p>
+ </div>
+ <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+  <i class="fas fa-user"></i>
+ </div>
 </div>
 
-<div class="flex gap-5 overflow-x-auto mb-8 no-scrollbar">
-    <div class="flex flex-col items-center min-w-[65px]">
-        <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm text-teal-500 mb-2 border border-teal-50"><i class="fas fa-cut text-xl"></i></div>
-        <span class="text-[11px] font-bold text-gray-600">حلاقة</span>
-    </div>
-    <div class="flex flex-col items-center min-w-[65px]">
-        <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm text-teal-500 mb-2 border border-teal-50"><i class="fas fa-spa text-xl"></i></div>
-        <span class="text-[11px] font-bold text-gray-600">عناية</span>
-    </div>
-    <div class="flex flex-col items-center min-w-[65px]">
-        <div class="w-14 h-14 bg-coral rounded-2xl flex items-center justify-center shadow-sm text-white mb-2" style="background:var(--coral)"><i class="fas fa-percent text-xl"></i></div>
-        <span class="text-[11px] font-bold text-gray-600">عروض</span>
-    </div>
-</div>
+<!-- SALONS -->
+<div id="salon-container"></div>
 
-<div id="salon-container" class="space-y-5">
-    </div>
-
+<!-- NAV -->
 <nav class="bottom-nav">
-    <div class="flex flex-col items-center text-teal-600"><i class="fas fa-home text-lg"></i><span class="text-[10px] mt-1">الرئيسية</span></div>
-    <div class="flex flex-col items-center text-gray-300"><i class="fas fa-calendar-check text-lg"></i><span class="text-[10px] mt-1">حجوزاتي</span></div>
-    <div class="flex flex-col items-center text-gray-300"><i class="fas fa-wallet text-lg"></i><span class="text-[10px] mt-1">المحفظة</span></div>
+ <div class="text-teal-600"><i class="fas fa-home"></i></div>
+ <div class="text-gray-300"><i class="fas fa-calendar-check"></i></div>
+ <div class="text-gray-300"><i class="fas fa-user"></i></div>
 </nav>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // إعداداتك التي زودتني بها
-    const firebaseConfig = {
-        apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
-        authDomain: "zayn-pi.firebaseapp.com",
-        projectId: "zayn-pi",
-        storageBucket: "zayn-pi.firebasestorage.app",
-        messagingSenderId: "1048366878166",
-        appId: "1:1048366878166:web:550f80d91286b61c866877"
-    };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+/* 🔥 Firebase */
+const firebaseConfig = {
+ apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
+ authDomain: "zayn-pi.firebaseapp.com",
+ projectId: "zayn-pi",
+};
 
-    const salons = [
-        { id: "s1", name: "صالون الملكي", location: "القاهرة", price: 3, img: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200" },
-        { id: "s2", name: "Luxury Barber", location: "دبي", price: 5, img: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=200" }
-    ];
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    const container = document.getElementById('salon-container');
-    salons.forEach(s => {
-        container.innerHTML += `
-        <div class="card">
-            <div class="flex p-4 gap-4 items-center">
-                <img src="${s.img}" class="w-20 h-20 rounded-xl object-cover">
-                <div class="flex-1">
-                    <h3 class="font-bold text-gray-800">${s.name}</h3>
-                    <p class="text-[10px] text-gray-400"><i class="fas fa-map-marker-alt ml-1"></i>${s.location}</p>
-                    <span class="text-[10px] bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full font-bold">Pi Accepted</span>
-                </div>
-                <div class="text-teal-600 font-black text-lg">${s.price} Pi</div>
-            </div>
-            <button id="btn-${s.id}" class="w-full py-4 text-white font-bold text-sm" style="background:var(--coral)">
-                احجز الآن | BOOK NOW
-            </button>
-        </div>`;
-    });
+/* 🔥 DATA */
+const salons = [
+ {id:"s1", name:"صالون الملكي", city:"القاهرة", price:3, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200"},
+ {id:"s2", name:"Luxury Barber", city:"دبي", price:5, rate:4.9, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=200"}
+];
 
-    // إضافة مستمعي الأحداث للأزرار
-    salons.forEach(s => {
-        document.getElementById(`btn-${s.id}`).addEventListener('click', () => handleBooking(s));
-    });
+const container = document.getElementById("salon-container");
 
-    let currentUser = "Guest";
+/* 🔥 RENDER */
+salons.forEach(s=>{
+ container.innerHTML += `
+ <div class="card">
+  <div class="flex p-4 gap-4 items-center">
+   <img src="${s.img}" class="w-20 h-20 rounded-xl object-cover">
+   <div class="flex-1">
+    <h3 class="font-bold">${s.name}</h3>
+    <p class="text-xs text-gray-400">${s.city}</p>
+    <span class="text-yellow-500 text-xs">⭐ ${s.rate}</span>
+   </div>
+   <div class="text-teal-600 font-bold">${s.price} Pi</div>
+  </div>
 
-    // Pi Network Auth
-    try {
-        Pi.init({ version: "2.0", sandbox: true });
-        const auth = await Pi.authenticate(['username', 'payments'], (p) => {});
-        currentUser = auth.user.username;
-        document.getElementById('user-greeting').innerText = "مرحباً، " + currentUser;
-    } catch (e) {
-        document.getElementById('user-greeting').innerText = "مرحباً، زائر التجربة";
-    }
+  <button id="btn-${s.id}" class="w-full py-4 text-white font-bold" style="background:#FF8A80">
+   احجز الآن
+  </button>
+ </div>
+ `;
+});
 
-    async function handleBooking(salon) {
-        const btn = document.getElementById(`btn-${salon.id}`);
-        btn.classList.add('btn-loading');
-        btn.innerText = "جاري الحجز...";
+/* 🔥 USER */
+let currentUser = "Guest";
 
-        try {
-            // 1. هنا نضع كود الدفع بـ Pi مستقبلاً
-            // 2. تسجيل في Firebase
-            await addDoc(collection(db, "bookings"), {
-                salonName: salon.name,
-                price: salon.price,
-                user: currentUser,
-                timestamp: serverTimestamp()
-            });
+async function initUser(){
+ try{
+  Pi.init({version:"2.0", sandbox:true});
+  const auth = await Pi.authenticate(['username'], ()=>{});
+  currentUser = auth.user.username;
+  document.getElementById("user-greeting").innerText = "مرحباً، " + currentUser;
+ }catch{
+  document.getElementById("user-greeting").innerText = "وضع التجربة";
+ }
+}
 
-            alert(`تهانينا ${currentUser}! تم تسجيل حجزك في ${salon.name}`);
-            btn.innerText = "تم الحجز بنجاح ✅";
-            btn.style.background = "#4DAF9F";
-        } catch (err) {
-            alert("حدث خطأ في الاتصال بقاعدة البيانات");
-            btn.classList.remove('btn-loading');
-            btn.innerText = "احجز الآن | BOOK NOW";
-        }
-    }
+initUser();
+
+/* 🔥 BOOK */
+async function handleBooking(salon){
+
+ const btn = document.getElementById(`btn-${salon.id}`);
+ if(btn.disabled) return;
+
+ btn.classList.add("btn-loading");
+ btn.innerText = "جاري الحجز...";
+
+ try{
+
+  await addDoc(collection(db,"bookings"),{
+   salon: salon.name,
+   price: salon.price,
+   user: currentUser,
+   createdAt: serverTimestamp()
+  });
+
+  btn.innerText = "تم الحجز ✅";
+  btn.style.background = "#4DAF9F";
+
+ }catch(err){
+  btn.classList.remove("btn-loading");
+  btn.innerText = "خطأ حاول مجدداً";
+ }
+
+}
+
+/* 🔥 EVENTS */
+salons.forEach(s=>{
+ document.getElementById(`btn-${s.id}`).onclick = ()=>handleBooking(s);
+});
+
 </script>
 
 </body>
