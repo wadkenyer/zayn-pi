@@ -1,1 +1,109 @@
-<!DOCTYPE html> <html lang="ar" dir="rtl"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>ZAYN PI | صالون حلاقة وتجميل</title> <script src="https://cdn.tailwindcss.com"></script> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> <script src="https://sdk.minepi.com/pi-sdk.js"></script> <style> :root { --teal: #4DAF9F; --coral: #FF8A80; --bg: #F8F9FA; } body { background: var(--bg); font-family: system-ui, -apple-system, sans-serif; } .card { background: #fff; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); overflow: hidden; } .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #eee; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); } .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #888; } .nav-item.active { color: var(--teal); } .btn-pi { background: linear-gradient(135deg, #4DAF9F, #3A8A7A); } .pi-login-btn { background: linear-gradient(135deg, #4DAF9F, #3A8A7A); color: white; } </style> </head> <body class="p-4 pb-24 min-h-screen"> <div id="home-page" class="page active"> <div class="flex justify-between items-center mb-6"> <div> <h1 class="text-3xl font-black text-teal-600">ZAYN PI</h1> <p id="user-greeting" class="text-sm text-gray-500">جاري التحقق من حسابك...</p> </div> <button onclick="initPi()" class="px-5 py-2 text-sm pi-login-btn rounded-2xl flex items-center gap-2"> <i class="fas fa-sign-in-alt"></i> تسجيل الدخول </button> </div> <h2 class="text-xl font-bold mb-4">صالونات مميزة</h2> <div id="salon-container" class="space-y-6"></div> </div> <div id="bookings-page" class="page"> <h2 class="text-2xl font-bold mb-6 text-center">حجوزاتي</h2> <div id="my-bookings-list" class="space-y-4"></div> </div> <div id="profile-page" class="page"> <h2 class="text-2xl font-bold mb-6 text-center">الملف الشخصي</h2> <div class="card p-8 text-center"> <div class="w-24 h-24 bg-teal-100 rounded-3xl mx-auto mb-6 flex items-center justify-center text-5xl">👤</div> <h3 id="profile-name" class="text-2xl font-bold">زائر</h3> <p id="profile-status" class="text-gray-500">مستخدم Pi Network</p> <button onclick="initPi()" class="mt-8 w-full py-3 pi-login-btn rounded-2xl font-medium"> تسجيل الدخول بـ Pi </button> </div> </div> <nav class="bottom-nav"> <div class="nav-item active" onclick="switchPage('home-page', this)"><i class="fas fa-home text-2xl"></i><span class="text-xs mt-1">الرئيسية</span></div> <div class="nav-item" onclick="switchPage('bookings-page', this)"><i class="fas fa-calendar-check text-2xl"></i><span class="text-xs mt-1">حجوزاتي</span></div> <div class="nav-item" onclick="switchPage('profile-page', this)"><i class="fas fa-user text-2xl"></i><span class="text-xs mt-1">حسابي</span></div> </nav> <script type="module"> import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"; import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"; // === ضع هذه القيم في Vercel Environment Variables لاحقًا === const firebaseConfig = { apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk", // غيرها لاحقاً authDomain: "zayn-pi.firebaseapp.com", projectId: "zayn-pi", }; const app = initializeApp(firebaseConfig); const db = getFirestore(app); const salons = [ {id:"s1", name:"صالون الملكي", city:"القاهرة", price:4.5, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400"}, {id:"s2", name:"Luxury Beauty", city:"دبي", price:7, rate:4.9, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400"}, {id:"s3", name:"باربيرا برو", city:"الرياض", price:5, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=400"} ]; let currentUser = null; async function initPi() { const greetingEl = document.getElementById("user-greeting"); const profileName = document.getElementById("profile-name"); const profileStatus = document.getElementById("profile-status"); greetingEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الاتصال بـ Pi...`; try { // تهيئة SDK (الطريقة الموصى بها 2026) await Pi.init({ version: "2.0", sandbox: false }); const scopes = ['username', 'payments']; const auth = await Pi.authenticate(scopes, (payment) => { console.log("Incomplete payment found:", payment); }); currentUser = auth.user; greetingEl.innerHTML = `مرحباً، <span class="font-bold text-teal-600">${currentUser.username}</span>`; profileName.textContent = currentUser.username || "مستخدم Pi"; profileStatus.textContent = "متصل بـ Pi Network ✓"; console.log("✅ Pi Auth Success:", currentUser); alert("تم تسجيل الدخول بنجاح!"); } catch (e) { console.error("Pi Auth Error:", e); greetingEl.innerHTML = `فشل الاتصال <span class="text-red-500">(جرب مرة أخرى)</span>`; profileStatus.textContent = "غير متصل"; // يمكن إضافة retry تلقائي أو رسالة أفضل if (confirm("فشل تسجيل الدخول بـ Pi. هل تريد المحاولة مرة أخرى؟")) { setTimeout(initPi, 500); } } } function switchPage(pageId, element = null) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); if (element) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); element.classList.add('active'); } if (pageId === 'bookings-page') loadMyBookings(); } async function handleBooking(salon) { if (!currentUser) { alert("يرجى تسجيل الدخول بحساب Pi أولاً"); initPi(); // محاولة تلقائية return; } const confirmPay = confirm(`هل تريد دفع ${salon.price} Pi لحجز في ${salon.name}؟`); if (!confirmPay) return; const btns = document.querySelectorAll(`button[data-salon="${salon.id}"]`); btns.forEach(b => { b.disabled = true; b.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الدفع...`; }); try { const paymentData = { amount: salon.price, memo: `حجز ${salon.name} - ${salon.city}`, metadata: { salonId: salon.id, salonName: salon.name, service: "حلاقة + تجميل أساسي", user: currentUser.username } }; await Pi.createPayment(paymentData, { onReadyForServerApproval: (paymentId) => { console.log("Payment ready for server approval:", paymentId); }, onReadyForServerCompletion: async (paymentId, txid) => { console.log("✅ Payment completed! TxID:", txid); await addDoc(collection(db, "bookings"), { user: currentUser.username, salon: salon.name, city: salon.city, amount: salon.price, txid: txid, status: "confirmed", createdAt: serverTimestamp() }); alert(`✅ تم الدفع والحجز بنجاح!\nرقم المعاملة: ${txid}`); loadMyBookings(); }, onCancel: () => alert("تم إلغاء الدفع"), onError: (error) => { console.error(error); alert("حدث خطأ في الدفع: " + (error.message || error)); } }); } catch (err) { console.error(err); alert("فشل في بدء عملية الدفع"); } finally { btns.forEach(b => { b.disabled = false; b.innerHTML = `احجز الآن - ${salon.price} Pi`; }); } } async function loadMyBookings() { const list = document.getElementById("my-bookings-list"); list.innerHTML = `<p class="text-center text-gray-400 py-10">جاري تحميل الحجوزات...</p>`; if (!currentUser) { list.innerHTML = `<div class="text-center text-amber-600 py-12">يرجى تسجيل الدخول أولاً لعرض حجوزاتك</div>`; return; } try { const q = query(collection(db, "bookings"), where("user", "==", currentUser.username)); const snapshot = await getDocs(q); if (snapshot.empty) { list.innerHTML = `<div class="text-center text-gray-400 py-12">لا توجد حجوزات حالياً</div>`; return; } let html = ''; snapshot.forEach(doc => { const b = doc.data(); html += ` <div class="card p-5"> <div class="flex justify-between"> <div> <h4 class="font-bold">${b.salon}</h4> <p class="text-sm text-gray-500">${b.city}</p> </div> <div class="text-right"> <p class="text-teal-600 font-bold">${b.amount} Pi</p> <p class="text-xs text-green-600">مؤكد</p> </div> </div> <p class="text-xs text-gray-400 mt-3">Tx: ${b.txid ? b.txid.substring(0,12)+'...' : 'جاري'}</p> </div>`; }); list.innerHTML = html; } catch (e) { list.innerHTML = `<p class="text-red-500 text-center">خطأ في تحميل الحجوزات</p>`; } } // عرض الصالونات const container = document.getElementById("salon-container"); salons.forEach(s => { const div = document.createElement('div'); div.className = "card"; div.innerHTML = ` <img src="${s.img}" class="w-full h-52 object-cover"> <div class="p-5"> <div class="flex justify-between items-start"> <div> <h3 class="font-bold text-xl">${s.name}</h3> <p class="text-gray-500">${s.city}</p> </div> <div class="text-right"> <span class="text-yellow-500">⭐ ${s.rate}</span> </div> </div> <div class="mt-6 flex justify-between items-center"> <div class="text-2xl font-bold text-teal-600">${s.price} <span class="text-base text-gray-500">Pi</span></div> <button data-salon="${s.id}" class="btn-pi text-white px-8 py-3 rounded-2xl font-bold active:scale-95 transition"> احجز الآن </button> </div> </div> `; container.appendChild(div); div.querySelector('button').onclick = () => handleBooking(s); }); // بدء التطبيق initPi(); // محاولة تلقائية عند التحميل </script> </body> </html>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAYN PI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <style>
+        :root { --teal: #4DAF9F; --coral: #FF8A80; }
+        body { background: #F8F9FA; font-family: system-ui; }
+        .page { display: none; } .page.active { display: block; }
+        .nav-item.active { color: var(--teal); }
+        .btn-main { background: linear-gradient(135deg, var(--teal), #3A8A7A); color: white; border-radius: 1rem; }
+    </style>
+</head>
+<body class="p-4 pb-24">
+
+<div id="home-page" class="page active">
+    <div class="flex justify-between items-center mb-6">
+        <div><h1 class="text-3xl font-black text-teal-600">ZAYN PI</h1><p id="user-greeting" class="text-xs text-gray-500">جاري التحقق...</p></div>
+        <button onclick="initPi()" class="px-4 py-2 btn-main text-xs"><i class="fas fa-sign-in-alt"></i> دخول</button>
+    </div>
+    <div id="salon-container" class="space-y-6"></div>
+</div>
+
+<div id="bookings-page" class="page text-center"><h2 class="text-xl font-bold mb-4">حجوزاتي</h2><div id="my-bookings-list" class="space-y-4 text-gray-400">يرجى الدخول أولاً</div></div>
+
+<div id="profile-page" class="page text-center">
+    <div class="bg-white p-8 rounded-3xl shadow-sm">
+        <div class="text-5xl mb-4">👤</div><h3 id="profile-name" class="text-xl font-bold">زائر</h3><p id="profile-status" class="text-gray-400">غير متصل</p>
+        <button onclick="initPi()" class="mt-6 w-full py-3 btn-main">دخول بـ Pi</button>
+    </div>
+</div>
+
+<nav class="fixed bottom-0 left-0 w-full bg-white flex justify-around p-3 border-t shadow-lg z-50">
+    <button onclick="switchPage('home-page', this)" class="nav-item active flex flex-col items-center"><i class="fas fa-home text-xl"></i><span class="text-[10px]">الرئيسية</span></button>
+    <button onclick="switchPage('bookings-page', this)" class="nav-item flex flex-col items-center"><i class="fas fa-calendar-check text-xl"></i><span class="text-[10px]">حجوزاتي</span></button>
+    <button onclick="switchPage('profile-page', this)" class="nav-item flex flex-col items-center"><i class="fas fa-user text-xl"></i><span class="text-[10px]">حسابي</span></button>
+</nav>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const db = getFirestore(initializeApp({ apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk", projectId: "zayn-pi" }));
+    const salons = [
+        {id:"s1", name:"الملكي", city:"القاهرة", price:4.5, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400"},
+        {id:"s2", name:"Luxury", city:"دبي", price:7, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400"}
+    ];
+    let user = null;
+
+    window.initPi = async () => {
+        try {
+            await Pi.init({ version: "2.0", sandbox: false });
+            const auth = await Pi.authenticate(['username', 'payments'], p => console.log(p));
+            user = auth.user;
+            document.getElementById("user-greeting").innerHTML = `مرحباً، <b>${user.username}</b>`;
+            document.getElementById("profile-name").innerText = user.username;
+            document.getElementById("profile-status").innerText = "متصل ✓";
+        } catch (e) { alert("فشل الاتصال بـ Pi"); }
+    }
+
+    window.switchPage = (id, el) => {
+        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+        if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
+        if(id === 'bookings-page') loadBookings();
+    }
+
+    async function handleBooking(s) {
+        if(!user) return initPi();
+        if(!confirm(`دفع ${s.price} Pi لـ ${s.name}؟`)) return;
+        try {
+            await Pi.createPayment({ amount: s.price, memo: `حجز ${s.name}`, metadata: {id: s.id} }, {
+                onReadyForServerCompletion: async (pid, txid) => {
+                    await addDoc(collection(db, "bookings"), { user: user.username, salon: s.name, amount: s.price, txid, createdAt: serverTimestamp() });
+                    alert("تم الحجز!"); loadBookings();
+                }
+            });
+        } catch (e) { alert("خطأ في الدفع"); }
+    }
+
+    async function loadBookings() {
+        const list = document.getElementById("my-bookings-list");
+        if(!user) return;
+        const q = query(collection(db, "bookings"), where("user", "==", user.username));
+        const snap = await getDocs(q);
+        list.innerHTML = snap.empty ? "لا توجد حجوزات" : snap.docs.map(d => `
+            <div class="bg-white p-4 rounded-2xl flex justify-between shadow-sm">
+                <div class="text-right font-bold">${d.data().salon}<p class="text-xs text-gray-400 font-normal">بواسطة ${d.data().txid.slice(0,8)}...</p></div>
+                <div class="text-teal-600 font-bold">${d.data().amount} Pi</div>
+            </div>`).join('');
+    }
+
+    const container = document.getElementById("salon-container");
+    container.innerHTML = salons.map(s => `
+        <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
+            <img src="${s.img}" class="w-full h-48 object-cover">
+            <div class="p-5 flex justify-between items-center">
+                <div><h3 class="font-bold text-lg">${s.name}</h3><p class="text-gray-400 text-sm">${s.city}</p></div>
+                <button onclick='window.book(${JSON.stringify(s)})' class="btn-main px-6 py-2 font-bold">${s.price} Pi</button>
+            </div>
+        </div>`).join('');
+
+    window.book = handleBooking;
+    initPi();
+</script>
+</body>
+</html>
