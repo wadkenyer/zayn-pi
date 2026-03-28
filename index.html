@@ -6,67 +6,82 @@
 <title>ZAYN PI</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
-body { background:#f5f7f6; font-family:sans-serif; }
-.card { background:white; border-radius:16px; padding:15px; margin-bottom:15px; }
+body {
+  background: #f5f7f6;
+  font-family: sans-serif;
+}
+
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+img {
+  width: 90px;
+  height: 90px;
+  border-radius: 15px;
+  object-fit: cover;
+}
 </style>
 </head>
 
 <body class="p-4">
 
-<h2 class="text-xl font-bold mb-4">ZAYN PI</h2>
+<h2 class="text-xl font-bold mb-6 text-right">ZAYN PI</h2>
 
-<!-- صالون -->
-<div class="card flex items-center justify-between">
+<div class="card">
   
-  <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200" 
-       class="w-20 h-20 rounded-xl">
-
-  <div class="flex-1 px-3">
-    <h3 class="font-bold">صالون الملكي</h3>
-    <p class="text-sm text-gray-500">القاهرة</p>
-    <p>⭐ 4.8</p>
-  </div>
-
   <button onclick="bookNow()" 
-    class="bg-red-400 text-white px-4 py-2 rounded-lg">
+    class="bg-red-400 text-white px-5 py-2 rounded-lg font-bold">
     احجز
   </button>
 
+  <div class="text-right flex-1 px-3">
+    <h3 class="font-bold text-lg">صالون الملكي</h3>
+    <p class="text-gray-400 text-sm">القاهرة</p>
+    <p class="text-yellow-500">⭐ 4.8</p>
+  </div>
+
+  <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200">
 </div>
 
 <!-- Firebase -->
 <script type="module">
 
-// 🔥 استبدل هذا بالكود الخاص بك من Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
+  apiKey: "ضع_هنا",
+  authDomain: "ضع_هنا",
+  projectId: "ضع_هنا",
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// زر الحجز
 window.bookNow = async function () {
   try {
     await addDoc(collection(db, "bookings"), {
       salon: "صالون الملكي",
+      city: "القاهرة",
+      rating: 4.8,
       price: 3,
-      date: new Date()
+      createdAt: new Date()
     });
 
     alert("تم الحجز بنجاح ✅");
 
-  } catch (error) {
+  } catch (e) {
     alert("خطأ ❌");
-    console.log(error);
+    console.log(e);
   }
 };
 
