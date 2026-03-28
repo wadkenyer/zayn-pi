@@ -8,16 +8,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <style>
-        :root { --teal: #4DAF9F; --bg: #F8F9FA; }
-        body { background: var(--bg); font-family: system-ui, -apple-system, sans-serif; }
-        .card { background: #fff; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; transition: 0.3s; }
-        .page { display: none; animation: fadeIn 0.4s ease; }
+        :root { --teal: #4DAF9F; --dark-teal: #3A8A7A; --bg: #F8F9FA; }
+        body { background: var(--bg); font-family: system-ui, -apple-system, sans-serif; scroll-behavior: smooth; }
+        .card { background: #fff; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; transition: all 0.3s ease; }
+        .card:active { transform: scale(0.98); }
+        .page { display: none; animation: fadeIn 0.4s ease-out; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #eee; z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.03); }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #eee; z-index: 1000; }
         .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #BBB; transition: 0.3s; }
-        .nav-item.active { color: var(--teal); }
-        .btn-pi { background: linear-gradient(135deg, #4DAF9F, #3A8A7A); color: white; box-shadow: 0 4px 15px rgba(77, 175, 159, 0.3); }
+        .nav-item.active { color: var(--teal); font-weight: bold; }
+        .btn-pi { background: linear-gradient(135deg, var(--teal), var(--dark-teal)); color: white; box-shadow: 0 4px 15px rgba(77, 175, 159, 0.3); transition: 0.3s; }
+        .btn-pi:disabled { opacity: 0.7; cursor: not-allowed; }
+        .status-badge { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; color: #d97706; }
     </style>
 </head>
 <body class="p-4 pb-28">
@@ -25,34 +28,47 @@
 <div id="home-page" class="page active">
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-3xl font-black text-teal-600 tracking-tight">ZAYN PI</h1>
-            <p id="user-greeting" class="text-sm text-gray-500">مرحباً بك في عالم التجميل</p>
+            <h1 class="text-3xl font-black text-teal-600 tracking-tight italic">ZAYN PI</h1>
+            <p id="user-greeting" class="text-xs text-gray-500 font-medium">مرحباً بك في عالم الفخامة</p>
         </div>
-        <div onclick="switchPage('profile-page')" class="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-2xl cursor-pointer border border-teal-100">
+        <div onclick="switchPage('profile-page')" class="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-2xl cursor-pointer border border-teal-100 shadow-sm">
             👤
         </div>
     </div>
 
-    <h2 class="text-xl font-bold mb-5 text-gray-800">الصالونات المميزة</h2>
+    <h2 class="text-xl font-bold mb-5 text-gray-800 flex items-center gap-2">
+        <i class="fas fa-star text-yellow-400"></i> الصالونات المختارة
+    </h2>
+    
     <div id="salon-container" class="space-y-8">
         </div>
 </div>
 
 <div id="bookings-page" class="page">
-    <h2 class="text-2xl font-bold mb-8 text-center text-gray-800">حجوزاتي القادمة</h2>
+    <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold text-gray-800">حجوزاتي</h2>
+        <p class="text-sm text-gray-400 mt-1">قائمة العمليات الناجحة</p>
+    </div>
     <div id="my-bookings-list" class="space-y-4">
         </div>
 </div>
 
-<div id="profile-page" class="page">
-    <h2 class="text-2xl font-bold mb-8 text-center">حسابي الشخصي</h2>
-    <div class="card p-10 text-center">
-        <div class="w-24 h-24 bg-teal-50 rounded-full mx-auto mb-6 flex items-center justify-center text-5xl border-4 border-white shadow-lg">👤</div>
+<div id="profile-page" class="page text-center">
+    <div class="card p-10">
+        <div class="relative w-24 h-24 mx-auto mb-6">
+            <div class="w-24 h-24 bg-teal-50 rounded-full flex items-center justify-center text-5xl border-4 border-white shadow-md">👤</div>
+            <div id="online-dot" class="absolute bottom-1 right-1 w-5 h-5 bg-gray-300 border-4 border-white rounded-full"></div>
+        </div>
         <h3 id="profile-name" class="text-2xl font-bold text-gray-800">زائر</h3>
-        <p id="profile-status" class="text-gray-400">مستخدم Pi Network</p>
+        <p id="profile-status" class="text-gray-400 text-sm">مستكشف في Pi Network</p>
+        
         <div class="mt-10 space-y-3">
-            <button onclick="initPi()" class="w-full py-4 btn-pi rounded-2xl font-bold">تسجيل الدخول بـ Pi</button>
-            <button onclick="location.reload()" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-medium">تحديث البيانات</button>
+            <button onclick="initPi()" id="login-btn" class="w-full py-4 btn-pi rounded-2xl font-bold flex items-center justify-center gap-2">
+                <i class="fab fa-raspberry-pi"></i> دخول بواسطة Pi
+            </button>
+            <button onclick="location.reload()" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-medium">
+                تحديث الصفحة
+            </button>
         </div>
     </div>
 </div>
@@ -73,16 +89,26 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// إعداد Firebase (تأكد من وضع الـ Key الخاص بك هنا)
-const firebaseConfig = { apiKey: "YOUR_FIREBASE_KEY", projectId: "zayn-pi" };
+// إعداد Firebase الخاص بك
+const firebaseConfig = {
+  apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
+  authDomain: "zayn-pi.firebaseapp.com",
+  projectId: "zayn-pi",
+  storageBucket: "zayn-pi.firebasestorage.app",
+  messagingSenderId: "1048366878166",
+  appId: "1:1048366878166:web:550f80d91286b61c866877"
+};
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let user = null;
+let isBooking = false;
+
 const salons = [
-    {id:"s1", name:"صالون الملكي", city:"القاهرة", price:4.5, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600"},
-    {id:"s2", name:"Luxury Beauty", city:"دبي", price:7, rate:4.9, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600"},
-    {id:"s3", name:"باربيرا برو", city:"الرياض", price:5.5, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
+    {id:"s1", name:"صالون الملكي", city:"القاهرة", price:0.5, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600"},
+    {id:"s2", name:"Luxury Beauty", city:"دبي", price:1.0, rate:4.9, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600"},
+    {id:"s3", name:"باربيرا برو", city:"الرياض", price:0.8, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
 ];
 
 window.initPi = async () => {
@@ -90,12 +116,16 @@ window.initPi = async () => {
         await Pi.init({ version: "2.0", sandbox: true });
         const auth = await Pi.authenticate(['username', 'payments']);
         user = auth.user;
+        
+        // تحديث الواجهة بعد الدخول
         document.getElementById("user-greeting").innerHTML = `مرحباً، <span class="font-bold text-teal-600">${user.username}</span>`;
         document.getElementById("profile-name").textContent = user.username;
-        document.getElementById("profile-status").textContent = "متصل ✓";
+        document.getElementById("profile-status").textContent = "مستخدم موثق ✓";
+        document.getElementById("online-dot").classList.replace("bg-gray-300", "bg-green-500");
+        document.getElementById("login-btn").style.display = "none";
     } catch (e) {
         console.error(e);
-        alert("فشل تسجيل الدخول");
+        alert("يرجى فتح التطبيق من متصفح Pi Browser");
     }
 };
 
@@ -107,12 +137,16 @@ window.switchPage = (id, el) => {
         el.classList.add('active');
     }
     if (id === 'bookings-page') loadBookings();
+    window.scrollTo(0,0);
 };
 
 window.book = async (s) => {
+    if (isBooking) return;
     if (!user) { await initPi(); if(!user) return; }
+    
     if (!confirm(`هل تود تأكيد حجزك في ${s.name} مقابل ${s.price} Pi؟`)) return;
-
+    
+    isBooking = true;
     try {
         await Pi.createPayment({
             amount: s.price,
@@ -126,7 +160,7 @@ window.book = async (s) => {
                     body: JSON.stringify({ paymentId })
                 });
                 const data = await res.json();
-                if(!res.ok || !data.success) throw new Error("Approval failed");
+                if(!res.ok || !data.success) throw new Error("السيرفر لم يوافق على الدفع");
                 return data;
             },
             onReadyForServerCompletion: async (paymentId, txid) => {
@@ -137,72 +171,89 @@ window.book = async (s) => {
                     txid: txid,
                     createdAt: serverTimestamp()
                 });
-                alert("✅ تم الحجز بنجاح!");
+                alert("✅ تم الحجز بنجاح! شكراً لاستخدامك Zayn Pi");
+                isBooking = false;
                 switchPage('bookings-page');
             },
-            onCancel: () => console.log("Canceled"),
-            onError: (e) => alert("خطأ: " + e.message)
+            onCancel: () => { isBooking = false; },
+            onError: (e) => { 
+                alert("خطأ أثناء الدفع: " + e.message); 
+                isBooking = false; 
+            }
         });
-    } catch (e) { alert("فشل بدء عملية الدفع"); }
+    } catch (e) { 
+        alert("حدث خطأ تقني"); 
+        isBooking = false;
+    }
 };
 
 async function loadBookings() {
     const list = document.getElementById("my-bookings-list");
-    if (!user) { list.innerHTML = "<p class='text-center mt-20 text-gray-400'>سجل دخولك لرؤية حجوزاتك</p>"; return; }
-    list.innerHTML = "<div class='text-center py-20'><i class='fas fa-spinner fa-spin text-teal-500 text-3xl'></i></div>";
+    if (!user) { list.innerHTML = "<p class='text-center mt-10 text-gray-400'>سجل دخولك لرؤية سجل حجوزاتك</p>"; return; }
+    
+    list.innerHTML = "<div class='text-center py-10'><i class='fas fa-circle-notch fa-spin text-teal-500 text-3xl'></i><p class='mt-2 text-sm text-gray-400'>جاري جلب البيانات...</p></div>";
     
     try {
         const q = query(collection(db, "bookings"), where("user", "==", user.username), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
-        if (snap.empty) { list.innerHTML = "<p class='text-center mt-20 text-gray-400'>لا توجد حجوزات سابقة</p>"; return; }
+        
+        if (snap.empty) { 
+            list.innerHTML = "<div class='text-center mt-10 text-gray-400'><i class='fas fa-calendar-times text-5xl mb-3'></i><p>لا توجد حجوزات مسجلة بعد</p></div>"; 
+            return; 
+        }
         
         list.innerHTML = snap.docs.map(doc => {
             const b = doc.data();
+            const date = b.createdAt ? b.createdAt.toDate().toLocaleDateString('ar-EG') : 'جاري المعالجة';
             return `
-            <div class="card p-6 border-r-8 border-teal-500">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h4 class="font-bold text-lg text-gray-800">${b.salon}</h4>
-                        <p class="text-xs text-gray-400 mt-1">المعاملة: ${b.txid.substring(0,12)}...</p>
-                    </div>
-                    <div class="text-teal-600 font-black text-xl">${b.amount} Pi</div>
+            <div class="card p-6 border-r-8 border-teal-500 flex justify-between items-center shadow-sm">
+                <div>
+                    <h4 class="font-bold text-gray-800">${b.salon}</h4>
+                    <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-mono">ID: ${b.txid.slice(0,10)}...</p>
+                    <p class="text-[10px] text-teal-600 mt-1"><i class="far fa-clock"></i> ${date}</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-teal-600 font-black text-xl">${b.amount}</div>
+                    <div class="text-[10px] text-gray-400 font-bold uppercase">Pi Coin</div>
                 </div>
             </div>`;
         }).join('');
-    } catch (e) { list.innerHTML = "<p class='text-red-500 text-center'>خطأ في تحميل البيانات</p>"; }
+    } catch (e) { 
+        list.innerHTML = "<p class='text-red-500 text-center font-bold'>عفواً، فشل تحميل البيانات من قاعدة البيانات</p>"; 
+    }
 }
 
-// عرض الصالونات بالتصميم الفخم (صور كبيرة + تدرج ظلال)
-const container = document.getElementById("salon-container");
-container.innerHTML = salons.map(s => `
-    <div class="card shadow-xl border border-gray-50">
+// بناء الصالونات
+document.getElementById("salon-container").innerHTML = salons.map(s => `
+    <div class="card shadow-lg border border-gray-50">
         <div class="relative">
-            <img src="${s.img}" class="w-full h-56 object-cover">
-            <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-xl text-yellow-600 font-bold text-sm shadow-sm">
-                ⭐ ${s.rate}
-            </div>
+            <img src="${s.img}" class="w-full h-60 object-cover" alt="${s.name}">
+            <div class="status-badge">⭐ ${s.rate}</div>
         </div>
         <div class="p-6">
             <div class="flex justify-between items-start">
                 <div>
                     <h3 class="font-bold text-2xl text-gray-800">${s.name}</h3>
-                    <p class="text-gray-400 flex items-center gap-1 mt-1">
-                        <i class="fas fa-map-marker-alt text-teal-500 text-xs"></i> ${s.city}
+                    <p class="text-gray-400 flex items-center gap-2 mt-1">
+                        <i class="fas fa-location-arrow text-teal-500 text-xs"></i> ${s.city}
                     </p>
                 </div>
-                <div class="text-right">
-                    <span class="text-2xl font-black text-teal-600">${s.price}</span>
-                    <span class="text-xs text-gray-400 block font-bold">Pi</span>
+                <div class="bg-teal-50 px-4 py-2 rounded-2xl text-center">
+                    <span class="text-xl font-black text-teal-600 block leading-none">${s.price}</span>
+                    <span class="text-[10px] text-teal-400 font-bold uppercase tracking-tighter">Pi Coin</span>
                 </div>
             </div>
             <button onclick='window.book(${JSON.stringify(s)})' class="w-full mt-6 py-4 btn-pi rounded-2xl font-bold text-lg active:scale-95 transition-transform shadow-lg">
-                احجز الآن
+                احجز موعدك الآن
             </button>
         </div>
     </div>
 `).join('');
 
-initPi();
+// محاولة الدخول التلقائي عند التحميل
+window.addEventListener('load', () => {
+    if (window.Pi) initPi();
+});
 </script>
 </body>
 </html>
