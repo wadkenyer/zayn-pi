@@ -1,70 +1,115 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZAYN PI</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-body { background:#F8F9FA; font-family:sans-serif; }
-.card { background:white; border-radius:15px; padding:15px; margin-bottom:15px; }
-.btn { background:#FF8A80; color:white; padding:10px; width:100%; border:none; border-radius:10px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAYN PI | زين باي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --teal-primary: #4DAF9F;
+            --beige-bg: #F8F9FA;
+            --coral-accent: #FF8A80;
+        }
+        body { background: var(--beige-bg); font-family: 'Segoe UI', sans-serif; }
+        .salon-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s; }
+        .salon-card:hover { transform: translateY(-3px); }
+        .btn-book { background: var(--coral-accent); color: white; transition: 0.3s; }
+        .btn-book:disabled { background: #ccc; cursor: not-allowed; }
+        .pi-badge { background: #e0f2f1; color: #00695c; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+    </style>
 </head>
 
-<body class="p-4">
+<body class="p-4 max-w-md mx-auto">
 
-<h2>زين باي</h2>
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-teal-700">زين باي <span class="text-gray-300 font-light">| ZAYN PI</span></h1>
+        <p class="text-gray-500 text-sm">احجز صالونك المفضل بعملة Pi</p>
+    </header>
 
-<div id="salons"></div>
+    <div id="salons" class="space-y-4">
+        </div>
 
-<!-- 🔥 Firebase هنا -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    // --- إعدادات Firebase ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "ضع_هنا",
-  authDomain: "ضع_هنا",
-  projectId: "ضع_هنا",
-};
+    const firebaseConfig = {
+        apiKey: "ضع_مفتاحك_هنا",
+        authDomain: "مشروعك.firebaseapp.com",
+        projectId: "مشروعك-id",
+    };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-// عرض بيانات تجريبية
-const salons = [
-  {name:"صالون الملكي", price:3},
-  {name:"Luxury Barber", price:5}
-];
+    // --- بيانات الصالونات ---
+    const salons = [
+        { id: 1, name: "صالون الملكي", price: 3, location: "القاهرة", rating: 4.8, img: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=200" },
+        { id: 2, name: "Luxury Barber", price: 5, location: "دبي", rating: 4.9, img: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=200" }
+    ];
 
-const container = document.getElementById("salons");
+    const container = document.getElementById("salons");
 
-salons.forEach(salon => {
-  container.innerHTML += `
-    <div class="card">
-      <h3>${salon.name}</h3>
-      <p>${salon.price} Pi</p>
-      <button class="btn" onclick="book('${salon.name}', ${salon.price})">احجز الآن</button>
-    </div>
-  `;
-});
-
-// 🔥 حفظ الحجز
-window.book = async (name, price) => {
-  try {
-    await addDoc(collection(db, "bookings"), {
-      salon: name,
-      price: price,
-      date: new Date()
+    // --- عرض الصالونات بتصميم احترافي ---
+    salons.forEach(salon => {
+        container.innerHTML += `
+            <div class="salon-card p-4">
+                <div class="flex items-center gap-4 mb-4">
+                    <img src="${salon.img}" class="w-20 h-20 rounded-xl object-cover" alt="salon">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-lg text-gray-800">${salon.name}</h3>
+                            <span class="text-teal-600 font-bold">${salon.price} Pi</span>
+                        </div>
+                        <p class="text-gray-400 text-xs"><i class="fas fa-map-marker-alt ml-1"></i>${salon.location}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-yellow-500 text-xs"><i class="fas fa-star"></i> ${salon.rating}</span>
+                            <span class="pi-badge">Pi Accepted</span>
+                        </div>
+                    </div>
+                </div>
+                <button id="btn-${salon.id}" class="btn-book w-full py-3 rounded-xl font-bold" 
+                        onclick="initiateBooking('${salon.id}', '${salon.name}', ${salon.price})">
+                    احجز الآن - BOOK NOW
+                </button>
+            </div>
+        `;
     });
-    alert("تم الحجز بنجاح 🔥");
-  } catch (e) {
-    alert("خطأ: " + e.message);
-  }
-};
+
+    // --- وظيفة الحجز والدفع ---
+    window.initiateBooking = async (id, name, price) => {
+        const btn = document.getElementById(`btn-${id}`);
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري معالجة الطلب...`;
+
+        try {
+            // 1. محاكاة الدفع عبر Pi SDK (هنا تضع كود Pi.createPayment مستقبلاً)
+            console.log(`بدء الدفع لمبلغ ${price} Pi...`);
+
+            // 2. حفظ البيانات في Firebase بعد نجاح الدفع
+            await addDoc(collection(db, "bookings"), {
+                salonName: name,
+                amount: price,
+                status: "confirmed", // حالة الحجز
+                createdAt: serverTimestamp(),
+                userPiId: "User_Test_ID" // يجب جلبه من Pi.authenticate()
+            });
+
+            alert(`تم الحجز في ${name} بنجاح! 🔥`);
+            btn.innerHTML = "تم الحجز ✅";
+            btn.style.background = "#4DAF9F";
+
+        } catch (error) {
+            console.error("خطأ أثناء الحجز:", error);
+            alert("فشل الحجز، يرجى المحاولة مرة أخرى.");
+            btn.disabled = false;
+            btn.innerHTML = "احجز الآن - BOOK NOW";
+        }
+    };
 </script>
 
 </body>
