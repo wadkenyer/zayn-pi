@@ -1,180 +1,204 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZAYN PI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-    <style>
-        :root { --teal: #4DAF9F; --coral: #FF8A80; }
-        body { background: #F8F9FA; font-family: system-ui; }
-        .page { display: none; } .page.active { display: block; }
-        .nav-item.active { color: var(--teal); }
-        .btn-main { background: linear-gradient(135deg, var(--teal), #3A8A7A); color: white; border-radius: 1rem; }
-        .loading-spinner { animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZAYN PI</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+<style>
+:root { --teal:#4DAF9F; }
+body { background:#F8F9FA; font-family:system-ui; }
+.page { display:none } .page.active { display:block }
+.nav-item.active { color:var(--teal) }
+.btn-main { background:linear-gradient(135deg,var(--teal),#3A8A7A); color:#fff; border-radius:1rem }
+.loading-spinner { animation:spin 1s linear infinite }
+@keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+</style>
 </head>
+
 <body class="p-4 pb-24">
 
+<!-- HOME -->
 <div id="home-page" class="page active">
-    <div class="flex justify-between items-center mb-6">
-        <div><h1 class="text-3xl font-black text-teal-600">ZAYN PI</h1><p id="user-greeting" class="text-xs text-gray-500">جاري التحقق...</p></div>
-        <button onclick="initPi()" class="px-4 py-2 btn-main text-xs"><i class="fas fa-sign-in-alt"></i> دخول</button>
+  <div class="flex justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-black text-teal-600">ZAYN PI</h1>
+      <p id="user-greeting" class="text-xs text-gray-500">غير متصل</p>
     </div>
-    <div id="salon-container" class="space-y-6"></div>
+    <button onclick="initPi()" class="px-4 py-2 btn-main text-xs">
+      <i class="fas fa-sign-in-alt"></i> دخول
+    </button>
+  </div>
+  <div id="salon-container" class="space-y-6"></div>
 </div>
 
+<!-- BOOKINGS -->
 <div id="bookings-page" class="page text-center">
-    <h2 class="text-xl font-bold mb-4">حجوزاتي</h2>
-    <div id="my-bookings-list" class="space-y-4 text-gray-400">يرجى تسجيل الدخول أولاً</div>
+  <h2 class="text-xl font-bold mb-4">حجوزاتي</h2>
+  <div id="my-bookings-list" class="space-y-4 text-gray-400">يرجى تسجيل الدخول</div>
 </div>
 
+<!-- PROFILE -->
 <div id="profile-page" class="page text-center">
-    <div class="bg-white p-8 rounded-3xl shadow-sm">
-        <div class="text-5xl mb-4">👤</div>
-        <h3 id="profile-name" class="text-xl font-bold">زائر</h3>
-        <p id="profile-status" class="text-gray-400">غير متصل</p>
-        <button onclick="initPi()" class="mt-6 w-full py-3 btn-main">دخول بـ Pi</button>
-    </div>
+  <div class="bg-white p-8 rounded-3xl shadow-sm">
+    <div class="text-5xl mb-4">👤</div>
+    <h3 id="profile-name" class="text-xl font-bold">زائر</h3>
+    <p id="profile-status" class="text-gray-400">غير متصل</p>
+    <button onclick="initPi()" class="mt-6 w-full py-3 btn-main">دخول بـ Pi</button>
+  </div>
 </div>
 
-<nav class="fixed bottom-0 left-0 w-full bg-white flex justify-around p-3 border-t shadow-lg z-50">
-    <button onclick="switchPage('home-page', this)" class="nav-item active flex flex-col items-center">
-        <i class="fas fa-home text-xl"></i><span class="text-[10px]">الرئيسية</span>
-    </button>
-    <button onclick="switchPage('bookings-page', this)" class="nav-item flex flex-col items-center">
-        <i class="fas fa-calendar-check text-xl"></i><span class="text-[10px]">حجوزاتي</span>
-    </button>
-    <button onclick="switchPage('profile-page', this)" class="nav-item flex flex-col items-center">
-        <i class="fas fa-user text-xl"></i><span class="text-[10px]">حسابي</span>
-    </button>
+<!-- NAV -->
+<nav class="fixed bottom-0 left-0 w-full bg-white flex justify-around p-3 border-t shadow-lg">
+  <button onclick="switchPage('home-page', this)" class="nav-item active flex flex-col items-center">
+    <i class="fas fa-home text-xl"></i><span class="text-[10px]">الرئيسية</span>
+  </button>
+  <button onclick="switchPage('bookings-page', this)" class="nav-item flex flex-col items-center">
+    <i class="fas fa-calendar-check text-xl"></i><span class="text-[10px]">حجوزاتي</span>
+  </button>
+  <button onclick="switchPage('profile-page', this)" class="nav-item flex flex-col items-center">
+    <i class="fas fa-user text-xl"></i><span class="text-[10px]">حسابي</span>
+  </button>
 </nav>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // إعداد Firebase
-    const firebaseConfig = { apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk", projectId: "zayn-pi" };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const app = initializeApp({
+  apiKey:"YOUR_FIREBASE_KEY",
+  projectId:"zayn-pi"
+});
+const db = getFirestore(app);
 
-    const salons = [
-        {id:"s1", name:"الملكي", city:"القاهرة", price:4.5, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400"},
-        {id:"s2", name:"Luxury", city:"دبي", price:7, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400"}
-    ];
-    let user = null;
+let user = null;
 
-    // تهيئة Pi SDK
-    window.initPi = async () => {
-        try {
-            await Pi.init({ version: "2.0", sandbox: false });
-            const auth = await Pi.authenticate(['username', 'payments'], p => console.log("Payment incomplete:", p));
-            user = auth.user;
-            document.getElementById("user-greeting").innerHTML = `مرحباً، <b>${user.username}</b>`;
-            document.getElementById("profile-name").innerText = user.username;
-            document.getElementById("profile-status").innerText = "متصل ✓";
-            console.log("Pi Auth Success");
-        } catch (e) { 
-            console.error(e);
-            alert("فشل الاتصال بـ Pi Browser"); 
+const salons = [
+  {id:"s1", name:"الملكي", city:"القاهرة", price:4.5, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400"},
+  {id:"s2", name:"Luxury", city:"دبي", price:7, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400"}
+];
+
+window.initPi = async () => {
+  try {
+    await Pi.init({ version:"2.0", sandbox:true });
+
+    const auth = await Pi.authenticate(['username','payments']);
+    user = auth.user;
+
+    document.getElementById("user-greeting").innerHTML = `مرحباً <b>${user.username}</b>`;
+    document.getElementById("profile-name").innerText = user.username;
+    document.getElementById("profile-status").innerText = "متصل ✓";
+
+  } catch(e) {
+    alert("فشل تسجيل الدخول");
+  }
+};
+
+window.switchPage = (id, el) => {
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===id));
+  if(el){
+    document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+    el.classList.add('active');
+  }
+  if(id==="bookings-page") loadBookings();
+};
+
+window.book = async (s) => {
+  if(!user){
+    await initPi();
+    if(!user) return;
+  }
+
+  if(!confirm(`دفع ${s.price} Pi ؟`)) return;
+
+  try {
+    await Pi.createPayment({
+      amount:s.price,
+      memo:`حجز ${s.name}`
+    },{
+      onReadyForServerApproval: async (paymentId) => {
+        const res = await fetch('/api/approve',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({paymentId})
+        });
+
+        const data = await res.json();
+
+        if(!res.ok || !data.success){
+          throw new Error("Approval failed");
         }
-    }
 
-    window.switchPage = (id, el) => {
-        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
-        if(el) { 
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); 
-            el.classList.add('active'); 
-        }
-        if(id === 'bookings-page') loadBookings();
-    }
+        return data;
+      },
 
-    // وظيفة الحجز والدفع المحدثة
-    window.book = async (s) => {
-        if(!user) return initPi();
-        if(!confirm(`تأكيد دفع ${s.price} Pi لـ ${s.name}؟`)) return;
+      onReadyForServerCompletion: async (paymentId, txid) => {
+        await addDoc(collection(db,"bookings"),{
+          user:user.username,
+          salon:s.name,
+          amount:s.price,
+          txid:txid,
+          createdAt:serverTimestamp()
+        });
 
-        try {
-            await Pi.createPayment({
-                amount: s.price,
-                memo: `حجز في ${s.name}`,
-                metadata: { salonId: s.id }
-            }, {
-                // خطوة الموافقة من السيرفر
-                onReadyForServerApproval: async (paymentId) => {
-                    const response = await fetch('/api/approve', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ paymentId })
-                    });
-                    const data = await response.json();
-                    if (!response.ok) throw new Error("فشلت موافقة السيرفر");
-                    return data; 
-                },
-                // خطوة إكمال المعاملة وحفظها في Firebase
-                onReadyForServerCompletion: async (paymentId, txid) => {
-                    await addDoc(collection(db, "bookings"), { 
-                        user: user.username, 
-                        salon: s.name, 
-                        amount: s.price, 
-                        txid: txid, 
-                        createdAt: serverTimestamp() 
-                    });
-                    alert("✅ تم الحجز بنجاح!");
-                    switchPage('bookings-page');
-                },
-                onCancel: () => console.log("تم إلغاء العملية"),
-                onError: (error) => alert("خطأ في الدفع: " + error.message)
-            });
-        } catch (e) {
-            console.error(e);
-            alert("حدث خطأ أثناء بدء عملية الدفع");
-        }
-    }
+        alert("تم الحجز بنجاح");
+        switchPage('bookings-page');
+      },
 
-    // تحميل الحجوزات من Firebase
-    async function loadBookings() {
-        const list = document.getElementById("my-bookings-list");
-        if(!user) return;
-        
-        list.innerHTML = '<i class="fas fa-spinner loading-spinner text-teal-500 text-2xl"></i>';
-        
-        try {
-            const q = query(collection(db, "bookings"), where("user", "==", user.username), orderBy("createdAt", "desc"));
-            const snap = await getDocs(q);
-            
-            list.innerHTML = snap.empty ? "لا توجد حجوزات سابقة" : snap.docs.map(d => `
-                <div class="bg-white p-4 rounded-2xl flex justify-between shadow-sm border-r-4 border-teal-500">
-                    <div class="text-right">
-                        <div class="font-bold text-gray-800">${d.data().salon}</div>
-                        <p class="text-[10px] text-gray-400">ID: ${d.data().txid.slice(0,10)}...</p>
-                    </div>
-                    <div class="text-teal-600 font-bold">${d.data().amount} Pi</div>
-                </div>`).join('');
-        } catch (e) {
-            console.error(e);
-            list.innerHTML = "خطأ في تحميل الحجوزات";
-        }
-    }
+      onCancel: ()=>alert("تم الإلغاء"),
+      onError: (e)=>alert("خطأ: "+e.message)
+    });
 
-    // رندر الصالونات في الصفحة الرئيسية
-    const container = document.getElementById("salon-container");
-    container.innerHTML = salons.map(s => `
-        <div class="bg-white rounded-3xl overflow-hidden shadow-sm">
-            <img src="${s.img}" class="w-full h-48 object-cover">
-            <div class="p-5 flex justify-between items-center">
-                <div><h3 class="font-bold text-lg">${s.name}</h3><p class="text-gray-400 text-sm">${s.city}</p></div>
-                <button onclick='window.book(${JSON.stringify(s)})' class="btn-main px-6 py-2 font-bold shadow-md active:scale-95 transition-all">
-                    ${s.price} Pi
-                </button>
-            </div>
-        </div>`).join('');
+  } catch(e){
+    console.error(e);
+    alert("فشل الدفع");
+  }
+};
 
-    // تشغيل SDK عند التحميل
-    initPi();
+async function loadBookings(){
+  const list = document.getElementById("my-bookings-list");
+
+  if(!user) return;
+
+  list.innerHTML = "جاري التحميل...";
+
+  const q = query(collection(db,"bookings"),
+    where("user","==",user.username),
+    orderBy("createdAt","desc")
+  );
+
+  const snap = await getDocs(q);
+
+  list.innerHTML = snap.empty
+    ? "لا يوجد حجوزات"
+    : snap.docs.map(d=>{
+        const b = d.data();
+        return `
+        <div class="bg-white p-4 rounded-xl flex justify-between">
+          <div>${b.salon}</div>
+          <div>${b.amount} Pi</div>
+        </div>`;
+      }).join("");
+}
+
+document.getElementById("salon-container").innerHTML =
+  salons.map(s=>`
+    <div class="bg-white p-4 rounded-2xl flex justify-between">
+      <div>
+        <h3 class="font-bold">${s.name}</h3>
+        <p class="text-gray-400">${s.city}</p>
+      </div>
+      <button onclick='book(${JSON.stringify(s)})' class="btn-main px-4 py-2">
+        ${s.price} Pi
+      </button>
+    </div>
+  `).join("");
+
 </script>
+
 </body>
 </html>
