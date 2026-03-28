@@ -8,55 +8,22 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-body {
-  background: #f5f7f6;
-  font-family: sans-serif;
-}
-
-.card {
-  background: white;
-  border-radius: 20px;
-  padding: 15px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-img {
-  width: 90px;
-  height: 90px;
-  border-radius: 15px;
-  object-fit: cover;
-}
+body { background:#F8F9FA; font-family:sans-serif; }
+.card { background:white; border-radius:15px; padding:15px; margin-bottom:15px; }
+.btn { background:#FF8A80; color:white; padding:10px; width:100%; border:none; border-radius:10px; }
 </style>
 </head>
 
 <body class="p-4">
 
-<h2 class="text-xl font-bold mb-6 text-right">ZAYN PI</h2>
+<h2>زين باي</h2>
 
-<div class="card">
-  
-  <button onclick="bookNow()" 
-    class="bg-red-400 text-white px-5 py-2 rounded-lg font-bold">
-    احجز
-  </button>
+<div id="salons"></div>
 
-  <div class="text-right flex-1 px-3">
-    <h3 class="font-bold text-lg">صالون الملكي</h3>
-    <p class="text-gray-400 text-sm">القاهرة</p>
-    <p class="text-yellow-500">⭐ 4.8</p>
-  </div>
-
-  <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200">
-</div>
-
-<!-- Firebase -->
+<!-- 🔥 Firebase هنا -->
 <script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "ضع_هنا",
@@ -67,24 +34,37 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-window.bookNow = async function () {
+// عرض بيانات تجريبية
+const salons = [
+  {name:"صالون الملكي", price:3},
+  {name:"Luxury Barber", price:5}
+];
+
+const container = document.getElementById("salons");
+
+salons.forEach(salon => {
+  container.innerHTML += `
+    <div class="card">
+      <h3>${salon.name}</h3>
+      <p>${salon.price} Pi</p>
+      <button class="btn" onclick="book('${salon.name}', ${salon.price})">احجز الآن</button>
+    </div>
+  `;
+});
+
+// 🔥 حفظ الحجز
+window.book = async (name, price) => {
   try {
     await addDoc(collection(db, "bookings"), {
-      salon: "صالون الملكي",
-      city: "القاهرة",
-      rating: 4.8,
-      price: 3,
-      createdAt: new Date()
+      salon: name,
+      price: price,
+      date: new Date()
     });
-
-    alert("تم الحجز بنجاح ✅");
-
+    alert("تم الحجز بنجاح 🔥");
   } catch (e) {
-    alert("خطأ ❌");
-    console.log(e);
+    alert("خطأ: " + e.message);
   }
 };
-
 </script>
 
 </body>
