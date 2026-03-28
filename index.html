@@ -42,6 +42,29 @@
 <a href="bookings.html">📅</a>
 <a href="profile.html">👤</a>
 </nav>
+<script type="module">
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
+  authDomain: "zayn-pi.firebaseapp.com",
+  projectId: "zayn-pi",
+  storageBucket: "zayn-pi.firebasestorage.app",
+  messagingSenderId: "1048366878166",
+  appId: "1:1048366878166:web:550f80d91286b61c866877"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// نجعلها متاحة لباقي الكود
+window.db = db;
+window.collection = collection;
+window.addDoc = addDoc;
+window.getDocs = getDocs;
+
+</script>
 </body>
 </html>
