@@ -2,114 +2,143 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ZAYN PI | زين باي</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
     <style>
-        :root {
-            --teal-primary: #4DAF9F;
-            --beige-bg: #F8F9FA;
-            --coral-accent: #FF8A80;
-        }
-        body { background: var(--beige-bg); font-family: 'Segoe UI', sans-serif; }
-        .salon-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s; }
-        .salon-card:hover { transform: translateY(-3px); }
-        .btn-book { background: var(--coral-accent); color: white; transition: 0.3s; }
-        .btn-book:disabled { background: #ccc; cursor: not-allowed; }
-        .pi-badge { background: #e0f2f1; color: #00695c; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+        :root { --teal: #4DAF9F; --coral: #FF8A80; --beige: #F8F9FA; }
+        body { background: var(--beige); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .card { background: #fff; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); overflow: hidden; border: 1px solid rgba(0,0,0,0.02); transition: 0.3s; }
+        .card:active { transform: scale(0.98); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; border-top: 1px solid #eee; display: flex; justify-content: space-around; padding: 12px; z-index: 100; }
     </style>
 </head>
 
-<body class="p-4 max-w-md mx-auto">
+<body class="p-4 pb-24">
 
-    <header class="mb-8 text-center">
-        <h1 class="text-3xl font-bold text-teal-700">زين باي <span class="text-gray-300 font-light">| ZAYN PI</span></h1>
-        <p class="text-gray-500 text-sm">احجز صالونك المفضل بعملة Pi</p>
-    </header>
+<div class="flex justify-between items-center mb-6 px-1">
+    <div>
+        <h1 class="text-2xl font-black text-teal-600 tracking-tight">ZAYN PI</h1>
+        <p id="user-greeting" class="text-xs text-gray-400">مرحباً بك في عالم باي</p>
+    </div>
+    <div id="user-pfp" class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border-2 border-teal-500">
+        <i class="fas fa-user text-gray-400"></i>
+    </div>
+</div>
 
-    <div id="salons" class="space-y-4">
+<div class="relative mb-8">
+    <input type="text" placeholder="ابحث عن صالون، حلاق، أو خدمة..." 
+    class="w-full p-4 pr-12 rounded-2xl shadow-sm border-none focus:ring-2 focus:ring-teal-500 transition-all outline-none">
+    <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
+</div>
+
+<div class="flex gap-5 overflow-x-auto mb-8 no-scrollbar">
+    <div class="flex flex-col items-center min-w-[65px]">
+        <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm text-teal-500 mb-2 border border-teal-50">
+            <i class="fas fa-cut text-xl"></i>
         </div>
+        <span class="text-[11px] font-bold text-gray-600">حلاقة</span>
+    </div>
+    <div class="flex flex-col items-center min-w-[65px]">
+        <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm text-teal-500 mb-2 border border-teal-50">
+            <i class="fas fa-spa text-xl"></i>
+        </div>
+        <span class="text-[11px] font-bold text-gray-600">عناية</span>
+    </div>
+    <div class="flex flex-col items-center min-w-[65px]">
+        <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm text-teal-500 mb-2 border border-teal-50">
+            <i class="fas fa-magic text-xl"></i>
+        </div>
+        <span class="text-[11px] font-bold text-gray-600">تجميل</span>
+    </div>
+    <div class="flex flex-col items-center min-w-[65px]">
+        <div class="w-14 h-14 bg-coral rounded-2xl flex items-center justify-center shadow-sm text-white mb-2" style="background:var(--coral)">
+            <i class="fas fa-percent text-xl"></i>
+        </div>
+        <span class="text-[11px] font-bold text-gray-600">عروض</span>
+    </div>
+</div>
 
-<script type="module">
-    // --- إعدادات Firebase ---
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<h2 class="font-bold text-gray-800 mb-4 px-1 text-lg">الصالونات المتاحة</h2>
+<div id="salon-container" class="space-y-5">
+    </div>
 
-    const firebaseConfig = {
-        apiKey: "ضع_مفتاحك_هنا",
-        authDomain: "مشروعك.firebaseapp.com",
-        projectId: "مشروعك-id",
-    };
+<nav class="bottom-nav shadow-2xl">
+    <div class="flex flex-col items-center text-teal-600"><i class="fas fa-home text-lg"></i><span class="text-[10px] mt-1">الرئيسية</span></div>
+    <div class="flex flex-col items-center text-gray-300"><i class="fas fa-calendar-check text-lg"></i><span class="text-[10px] mt-1">حجوزاتي</span></div>
+    <div class="flex flex-col items-center text-gray-300"><i class="fas fa-wallet text-lg"></i><span class="text-[10px] mt-1">المحفظة</span></div>
+</nav>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+<script>
+// محاكاة بيانات الصالونات
+const salons = [
+    { name: "صالون الملكي", location: "القاهرة، مصر", price: 3, rating: 4.8, img: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200" },
+    { name: "Luxury Barber", location: "دبي، مارينا", price: 5, rating: 4.9, img: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=200" }
+];
 
-    // --- بيانات الصالونات ---
-    const salons = [
-        { id: 1, name: "صالون الملكي", price: 3, location: "القاهرة", rating: 4.8, img: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=200" },
-        { id: 2, name: "Luxury Barber", price: 5, location: "دبي", rating: 4.9, img: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=200" }
-    ];
-
-    const container = document.getElementById("salons");
-
-    // --- عرض الصالونات بتصميم احترافي ---
-    salons.forEach(salon => {
-        container.innerHTML += `
-            <div class="salon-card p-4">
-                <div class="flex items-center gap-4 mb-4">
-                    <img src="${salon.img}" class="w-20 h-20 rounded-xl object-cover" alt="salon">
-                    <div class="flex-1">
-                        <div class="flex justify-between items-start">
-                            <h3 class="font-bold text-lg text-gray-800">${salon.name}</h3>
-                            <span class="text-teal-600 font-bold">${salon.price} Pi</span>
-                        </div>
-                        <p class="text-gray-400 text-xs"><i class="fas fa-map-marker-alt ml-1"></i>${salon.location}</p>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-yellow-500 text-xs"><i class="fas fa-star"></i> ${salon.rating}</span>
-                            <span class="pi-badge">Pi Accepted</span>
-                        </div>
-                    </div>
+// عرض الصالونات
+const container = document.getElementById('salon-container');
+salons.forEach(s => {
+    container.innerHTML += `
+    <div class="card">
+        <div class="flex p-4 gap-4 items-center">
+            <img src="${s.img}" class="w-20 h-20 rounded-xl object-cover shadow-inner">
+            <div class="flex-1">
+                <h3 class="font-bold text-gray-800">${s.name}</h3>
+                <p class="text-xs text-gray-400 mb-1"><i class="fas fa-map-marker-alt ml-1"></i>${s.location}</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-yellow-500 text-xs font-bold">⭐ ${s.rating}</span>
+                    <span class="text-[10px] bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full font-bold">Pi Accepted</span>
                 </div>
-                <button id="btn-${salon.id}" class="btn-book w-full py-3 rounded-xl font-bold" 
-                        onclick="initiateBooking('${salon.id}', '${salon.name}', ${salon.price})">
-                    احجز الآن - BOOK NOW
-                </button>
             </div>
-        `;
+            <div class="text-teal-600 font-black text-lg">${s.price} <span class="text-[10px]">Pi</span></div>
+        </div>
+        <button onclick="payWithPi('${s.name}', ${s.price})" class="w-full py-4 text-white font-bold text-sm tracking-widest active:opacity-80 transition" style="background:var(--coral)">
+            احجز الآن | BOOK NOW
+        </button>
+    </div>`;
+});
+
+// --- PI NETWORK INTEGRATION ---
+
+// 1. تهيئة الـ SDK
+Pi.init({ version: "2.0", sandbox: true }); 
+
+// 2. التحقق من المستخدم تلقائياً
+async function authenticateUser() {
+    try {
+        const scopes = ['username', 'payments'];
+        const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
+        document.getElementById('user-greeting').innerText = "مرحباً، " + auth.user.username;
+        // هنا يمكنك تحديث صورة المستخدم إذا توفرت
+    } catch (err) {
+        console.error("Auth failed", err);
+    }
+}
+
+// 3. وظيفة الدفع
+function payWithPi(salonName, amount) {
+    // هذه هي الدالة التي تستدعي محفظة Pi الحقيقية
+    Pi.createPayment({
+        amount: amount,
+        memo: "حجز موعد في " + salonName,
+        metadata: { salon: salonName },
+    }, {
+        onReadyForServerApproval: (paymentId) => { console.log("Payment Ready", paymentId); },
+        onReadyForServerCompletion: (paymentId, txid) => { alert("تم الحجز والدفع بنجاح! رقم المعاملة: " + txid); },
+        onCancel: (paymentId) => { console.log("Cancelled"); },
+        onError: (error, payment) => { console.error("Error", error); },
     });
+}
 
-    // --- وظيفة الحجز والدفع ---
-    window.initiateBooking = async (id, name, price) => {
-        const btn = document.getElementById(`btn-${id}`);
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري معالجة الطلب...`;
+function onIncompletePaymentFound(payment) { /* للتعامل مع المدفوعات المعلقة */ }
 
-        try {
-            // 1. محاكاة الدفع عبر Pi SDK (هنا تضع كود Pi.createPayment مستقبلاً)
-            console.log(`بدء الدفع لمبلغ ${price} Pi...`);
-
-            // 2. حفظ البيانات في Firebase بعد نجاح الدفع
-            await addDoc(collection(db, "bookings"), {
-                salonName: name,
-                amount: price,
-                status: "confirmed", // حالة الحجز
-                createdAt: serverTimestamp(),
-                userPiId: "User_Test_ID" // يجب جلبه من Pi.authenticate()
-            });
-
-            alert(`تم الحجز في ${name} بنجاح! 🔥`);
-            btn.innerHTML = "تم الحجز ✅";
-            btn.style.background = "#4DAF9F";
-
-        } catch (error) {
-            console.error("خطأ أثناء الحجز:", error);
-            alert("فشل الحجز، يرجى المحاولة مرة أخرى.");
-            btn.disabled = false;
-            btn.innerHTML = "احجز الآن - BOOK NOW";
-        }
-    };
+authenticateUser(); // ابدأ التحقق عند تحميل الصفحة
 </script>
 
 </body>
