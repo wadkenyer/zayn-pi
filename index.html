@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <style>
-        :root { --teal: #4DAF9F; --dark-teal: #3A8A7A; --bg: #F8F9FA; }
-        body { background: var(--bg); font-family: system-ui, sans-serif; }
+        :root { --teal: #4DAF9F; --dark-teal: #3A8A7A; }
+        body { background: #F8F9FA; font-family: system-ui, sans-serif; }
         .card { background: #fff; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); overflow: hidden; }
         .page { display: none; }
         .page.active { display: block; }
@@ -17,7 +17,6 @@
         .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #888; }
         .nav-item.active { color: var(--teal); }
         .btn-pi { background: linear-gradient(135deg, var(--teal), var(--dark-teal)); color: white; }
-        .btn-pi:disabled { opacity: 0.7; cursor: not-allowed; }
     </style>
 </head>
 <body class="p-4 pb-28 min-h-screen">
@@ -56,7 +55,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
@@ -75,18 +74,33 @@ const salons = [
     {id:"s3", name:"باربيرا برو", city:"الرياض", price:0.8, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
 ];
 
-// معالجة الدفعات المعلقة (مهم جداً)
+// معالجة الدفعات المعلقة
 const onIncompletePaymentFound = async (payment) => {
     const paymentId = payment.identifier || payment.paymentId;
     console.log("⚠️ Pending payment found:", payment);
 
     try {
-        if (payment.status === 'INITIATED') {
-            await fetch('/api/pi/approve', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ paymentId }) });
-        } else if (payment.status === 'APPROVED') {
-            await fetch('/api/pi/complete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ paymentId, txid: payment.transaction?.txid }) });
+        const status = payment.status;
+        if (status === 'INITIATED') {
+            await fetch('/api/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentId })
+            });
+        } else if (status === 'APPROVED') {
+            if (payment.transaction?.txid) {
+                await fetch('/api/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentId, txid: payment.transaction.txid })
+                });
+            }
         } else {
-            await fetch('/api/pi/cancel', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ paymentId }) });
+            await fetch('/api/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentId })
+            });
         }
     } catch (e) {
         console.error("Error handling incomplete payment:", e);
@@ -95,7 +109,7 @@ const onIncompletePaymentFound = async (payment) => {
 
 window.initPi = async () => {
     try {
-        await Pi.init({ version: "2.0", sandbox: false });
+        await Pi.init({ version: "2.0", sandbox: true });   // sandbox: true لأننا على testnet
         const auth = await Pi.authenticate(['username', 'payments'], onIncompletePaymentFound);
         currentUser = auth.user;
 
@@ -134,7 +148,7 @@ window.book = async (salon) => {
 
         await Pi.createPayment(paymentData, {
             onReadyForServerApproval: async (paymentId) => {
-                await fetch('/api/pi/approve', {
+                await fetch('/api/approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentId })
@@ -142,15 +156,13 @@ window.book = async (salon) => {
             },
 
             onReadyForServerCompletion: async (paymentId, txid) => {
-                // إكمال الدفع
-                await fetch('/api/pi/complete', {
+                await fetch('/api/complete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentId, txid })
                 });
 
-                // التحقق النهائي
-                const verifyRes = await fetch('/api/pi/verify', {
+                const verifyRes = await fetch('/api/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentId })
@@ -167,7 +179,7 @@ window.book = async (salon) => {
                         createdAt: serverTimestamp()
                     });
 
-                    alert(`✅ تم الحجز بنجاح!\nرقم المعاملة: ${txid.slice(0,12)}...`);
+                    alert(`✅ تم الحجز بنجاح!\nرقم المعاملة: ${(txid || '').slice(0,12)}...`);
                     switchPage('bookings-page');
                 } else {
                     alert("⚠️ الدفع تم تسجيله لكنه لم يكتمل بشكل كامل");
@@ -191,7 +203,36 @@ async function loadBookings() {
         list.innerHTML = "<p class='text-center text-gray-400 py-10'>سجل الدخول لرؤية حجوزاتك</p>";
         return;
     }
-    // يمكنك إضافة كود loadBookings القديم هنا إذا أردت
+
+    list.innerHTML = "<div class='text-center py-10'><i class='fas fa-circle-notch fa-spin text-teal-500 text-3xl'></i></div>";
+
+    try {
+        const q = query(collection(db, "bookings"), where("user", "==", currentUser.username), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+            list.innerHTML = "<p class='text-center text-gray-400 py-10'>لا توجد حجوزات بعد</p>";
+            return;
+        }
+
+        list.innerHTML = snap.docs.map(doc => {
+            const b = doc.data();
+            return `
+            <div class="card p-6 border-r-8 border-teal-500 flex justify-between items-center">
+                <div>
+                    <h4 class="font-bold">${b.salon}</h4>
+                    <p class="text-xs text-gray-400">Tx: ${(b.txid || '').slice(0,12)}...</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-teal-600 font-black text-xl">${b.amount}</div>
+                    <div class="text-xs text-gray-400">Pi</div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        console.error(e);
+        list.innerHTML = "<p class='text-red-500 text-center'>خطأ في تحميل الحجوزات</p>";
+    }
 }
 
 // بناء الصالونات
@@ -209,7 +250,7 @@ document.getElementById("salon-container").innerHTML = salons.map(s => `
     </div>
 `).join('');
 
-initPi(); // بدء تلقائي
+// لا نستدعي initPi() تلقائياً - المستخدم يضغط الزر
 </script>
 </body>
 </html>
