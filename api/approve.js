@@ -1,3 +1,4 @@
+// pages/api/approve.js   أو app/api/approve/route.js حسب إصدار Next.js
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -11,12 +12,12 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://api.minepi.com/v2/payments/${paymentId}/approve`,   // ← هذا هو الصحيح
+      `https://api.minepi.com/v2/payments/${paymentId}/approve`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Key ${process.env.PI_API_KEY}`,   // Key بحرف كبير
+          "Authorization": `Key ${process.env.PI_API_KEY}`,   // K كبير
         },
       }
     );
@@ -24,24 +25,13 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (response.ok) {
-      return res.status(200).json({
-        ...data,
-        success: true,
-        message: "Payment approved successfully (Testnet)"
-      });
+      return res.status(200).json({ ...data, success: true });
     } else {
-      console.error("Pi Approve Error:", response.status, data);
-      return res.status(response.status || 400).json({
-        error: "Pi API Error",
-        status: response.status,
-        details: data
-      });
+      console.error("Pi Approve failed:", data);
+      return res.status(response.status).json({ error: "Pi API Error", details: data });
     }
   } catch (error) {
-    console.error("Server error approving Pi payment:", error);
-    return res.status(500).json({
-      error: "Internal Server Error",
-      message: "Failed to connect to Pi API"
-    });
+    console.error("Approve server error:", error);
+    return res.status(500).json({ error: "Server Error" });
   }
 }
