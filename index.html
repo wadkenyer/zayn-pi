@@ -145,7 +145,8 @@ window.book = async (s) => {
         await initPi();
         if (!user) return;
     }
-
+localStorage.setItem("piUser", JSON.stringify(user));
+    
     if (!confirm(`هل تود حجز موعد في ${s.name} بـ ${s.price} Pi؟`)) return;
 
     isBooking = true;
