@@ -1,29 +1,49 @@
-// api/approve.js
 export default async function handler(req, res) {
-    const { paymentId } = req.body;
+  // التحقق من الـ Method
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-    try {
-        const response = await fetch(
-            `https://api.testnet.minepi.com/v2/payments/${paymentId}/approve`, // الرابط الذي أرسلته أنت
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Key ${process.env.PI_API_KEY}` // تأكد أن هذا المفتاح مضاف في Vercel
-                }
-            }
-        );
+  const { paymentId } = req.body;
 
-        const data = await response.json();
+  if (!paymentId) {
+    return res.status(400).json({ error: "paymentId is required" });
+  }
 
-        if (response.ok) {
-            res.status(200).json({ ...data, success: true });
-        } else {
-            res.status(400).json({ error: "خطأ من شبكة باي", details: data });
-        }
-    } catch (error) {
-        res.status(500).json({ error: "خطأ داخلي في السيرفر" });
+  try {
+    const response = await fetch(
+      `https://api.minepi.com/v2/payments/${paymentId}/approve`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Key ${process.env.PI_API_KEY}`,   // Key بحرف كبير
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // نجاح
+      return res.status(200).json({ 
+        ...data, 
+        success: true,
+        message: "Payment approved successfully" 
+      });
+    } else {
+      // خطأ من Pi API
+      return res.status(response.status).json({ 
+        error: "Pi API Error", 
+        status: response.status,
+        details: data 
+      });
     }
-}    res.status(500).json({ error: "Internal Server Error" });
+  } catch (error) {
+    console.error("Server error approving Pi payment:", error);
+    return res.status(500).json({ 
+      error: "Server Error", 
+      message: "Failed to approve payment" 
+    });
   }
 }
