@@ -1,76 +1,40 @@
-<script type="module">
-    // ... إعدادات Firebase كما هي ...
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAYN PI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <style>
+        body { font-family: system-ui; background: #f8f9fa; }
+        .card { background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="p-4">
 
-    // دالة معالجة الدفعات المعلقة (تم تعديل المسارات لتناسب Vercel)
-    const onIncompletePaymentFound = async (payment) => {
-        const paymentId = payment.identifier || payment.paymentId;
-        try {
-            const status = payment.status;
-            if (status === 'INITIATED') {
-                await fetch('/api/approve', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ paymentId }) 
-                });
-            } else if (status === 'APPROVED') {
-                await fetch('/api/complete', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ paymentId, txid: payment.transaction?.txid }) 
-                });
-            }
-        } catch (e) {
-            console.error("Incomplete payment error:", e);
-        }
-    };
+<h1 class="text-3xl font-bold text-center my-8 text-teal-600">ZAYN PI</h1>
 
-    // ... دالة initPi و switchPage كما هي ...
+<div id="status" class="text-center mb-6">جاري التحقق من Pi...</div>
 
-    window.book = async (salon) => {
-        if (isProcessingPayment) return;
-        if (!currentUser) return alert("يرجى تسجيل الدخول أولاً");
-        
-        isProcessingPayment = true;
-        try {
-            await Pi.createPayment({
-                amount: salon.price,
-                memo: `حجز في ${salon.name}`,
-                metadata: { salonId: salon.id }
-            }, {
-                onReadyForServerApproval: async (paymentId) => {
-                    // الاتصال بـ Vercel Function مباشرة
-                    await fetch('/api/approve', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ paymentId }) 
-                    });
-                },
-                onReadyForServerCompletion: async (paymentId, txid) => {
-                    // إكمال العملية في شبكة Pi
-                    await fetch('/api/complete', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ paymentId, txid }) 
-                    });
+<button onclick="initPi()" class="block mx-auto bg-teal-600 text-white px-8 py-4 rounded-2xl text-lg font-bold">
+    دخول بـ Pi
+</button>
 
-                    // تسجيل الحجز في Firebase
-                    await addDoc(collection(db, "bookings"), {
-                        user: currentUser.username,
-                        salon: salon.name,
-                        amount: salon.price,
-                        txid: txid,
-                        createdAt: serverTimestamp()
-                    });
-                    
-                    alert("✅ تم الحجز بنجاح!");
-                    switchPage('bookings-page');
-                },
-                onCancel: () => { isProcessingPayment = false; },
-                onError: (err) => { isProcessingPayment = false; console.error(err); }
-            });
-        } catch (e) {
-            isProcessingPayment = false;
-        }
-    };
-    // ... باقي الدوال كما هي ...
+<script>
+let currentUser = null;
+
+async function initPi() {
+    try {
+        await Pi.init({ version: "2.0", sandbox: true });
+        const auth = await Pi.authenticate(['username', 'payments']);
+        currentUser = auth.user;
+        document.getElementById("status").innerHTML = `مرحباً ${currentUser.username} ✓`;
+        alert("تم تسجيل الدخول بنجاح");
+    } catch (e) {
+        alert("فشل تسجيل الدخول - تأكد من Pi Browser");
+    }
+}
 </script>
+</body>
+</html>
