@@ -1,37 +1,66 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تأكيد الحجز</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأكيد الحجز - ZAYN PI</title>
+    <link rel="stylesheet" href="style.css">
+    <script defer src="app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
-<link rel="stylesheet" href="style.css">
-<script defer src="app.js"></script>
-
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f8f9fa; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .btn-pi {
+            background: linear-gradient(135deg, #14b8a6, #0f766e);
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+        }
+    </style>
 </head>
+<body class="p-4 pb-24">
 
-<body>
+    <div class="max-w-md mx-auto">
+        <h2 class="text-3xl font-bold text-center mb-8 text-teal-700">تأكيد الحجز</h2>
 
-<h2>تأكيد الحجز</h2>
+        <div class="card" id="booking-details">
+            <!-- يتم ملؤه بالجافاسكريبت -->
+        </div>
 
-<div class="card">
-<p id="salon"></p>
-<p id="price"></p>
-</div>
+        <button onclick="startPayment()" class="btn-pi">
+            <i class="fab fa-raspberry-pi mr-2"></i>
+            دفع وتأكيد الحجز بـ Pi
+        </button>
 
-<button onclick="confirmBooking()" class="btn green">
-تأكيد الحجز
-</button>
+        <p class="text-center text-gray-500 text-sm mt-6">
+            سيتم خصم المبلغ من محفظتك في Pi Network
+        </p>
+    </div>
 
-<nav class="nav">
-<a href="index.html">🏠</a>
-<a href="bookings.html">📅</a>
-<a href="profile.html">👤</a>
-</nav>
+    <nav class="nav fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-3">
+        <div class="flex justify-around max-w-md mx-auto">
+            <a href="index.html" class="text-2xl">🏠</a>
+            <a href="bookings.html" class="text-2xl">📅</a>
+            <a href="profile.html" class="text-2xl">👤</a>
+        </div>
+    </nav>
+
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
@@ -45,12 +74,119 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// نجعلها متاحة لباقي الكود
-window.db = db;
-window.collection = collection;
-window.addDoc = addDoc;
-window.getDocs = getDocs;
+let user = null;
+let currentBooking = null;
 
+// تحميل بيانات المستخدم
+function loadUser() {
+    const saved = localStorage.getItem("piUser");
+    if (saved) user = JSON.parse(saved);
+}
+
+// جلب بيانات الحجز من الـ URL
+function getBookingFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    currentBooking = {
+        salon: params.get("salon") || "صالون غير محدد",
+        price: parseFloat(params.get("price")) || 0,
+        salonId: params.get("id") || "unknown"
+    };
+}
+
+// عرض تفاصيل الحجز
+function displayBooking() {
+    const container = document.getElementById("booking-details");
+    container.innerHTML = `
+        <div class="text-center">
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">${currentBooking.salon}</h3>
+            <div class="flex justify-center items-baseline gap-2 mt-6">
+                <span class="text-5xl font-black text-teal-600">${currentBooking.price}</span>
+                <span class="text-2xl text-teal-400">Pi</span>
+            </div>
+            <p class="text-gray-500 mt-2">سيتم دفع هذا المبلغ مقابل الحجز</p>
+        </div>
+    `;
+}
+
+// بدء عملية الدفع
+window.startPayment = async () => {
+    if (!user) {
+        alert("يرجى تسجيل الدخول أولاً");
+        window.location.href = "index.html";
+        return;
+    }
+
+    if (!currentBooking || currentBooking.price <= 0) {
+        alert("بيانات الحجز غير صحيحة");
+        return;
+    }
+
+    try {
+        await Pi.init({ version: "2.0", sandbox: true });
+
+        await Pi.createPayment({
+            amount: currentBooking.price,
+            memo: `حجز ${currentBooking.salon} - ZAYN PI`,
+            metadata: { 
+                salonId: currentBooking.salonId,
+                salonName: currentBooking.salon 
+            }
+        }, {
+            onReadyForServerApproval: async (paymentId) => {
+                console.log("جاري الموافقة...", paymentId);
+                const res = await fetch('/api/approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentId })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error("فشل موافقة السيرفر");
+                return data;
+            },
+
+            onReadyForServerCompletion: async (paymentId, txid) => {
+                // حفظ الحجز في Firestore
+                await addDoc(collection(db, "bookings"), {
+                    user: user.username,
+                    salon: currentBooking.salon,
+                    amount: currentBooking.price,
+                    txid: txid,
+                    createdAt: serverTimestamp()
+                });
+
+                // إكمال الدفع عند Pi
+                await fetch('/api/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentId, txid })
+                });
+
+                alert(`✅ تم تأكيد الحجز بنجاح!\nرقم المعاملة: ${txid.slice(0, 12)}...`);
+                window.location.href = "bookings.html";
+            },
+
+            onCancel: () => {
+                alert("تم إلغاء عملية الدفع");
+            },
+
+            onError: (error) => {
+                console.error(error);
+                alert("حدث خطأ أثناء الدفع: " + (error.message || "غير معروف"));
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        alert("حدث خطأ تقني. تأكد من فتح التطبيق داخل Pi Browser");
+    }
+};
+
+// تشغيل الصفحة عند التحميل
+window.addEventListener('load', () => {
+    loadUser();
+    getBookingFromURL();
+    displayBooking();
+});
 </script>
+
 </body>
 </html>
