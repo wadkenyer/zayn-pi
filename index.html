@@ -40,8 +40,7 @@
         <i class="fas fa-star text-yellow-400"></i> الصالونات المختارة
     </h2>
     
-    <div id="salon-container" class="space-y-8">
-        </div>
+    <div id="salon-container" class="space-y-8"></div>
 </div>
 
 <div id="bookings-page" class="page">
@@ -49,8 +48,7 @@
         <h2 class="text-2xl font-bold text-gray-800">حجوزاتي</h2>
         <p class="text-sm text-gray-400 mt-1">قائمة العمليات الناجحة</p>
     </div>
-    <div id="my-bookings-list" class="space-y-4">
-        </div>
+    <div id="my-bookings-list" class="space-y-4"></div>
 </div>
 
 <div id="profile-page" class="page text-center">
@@ -89,7 +87,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// إعداد Firebase الخاص بك
+// إعداد Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
   authDomain: "zayn-pi.firebaseapp.com",
@@ -117,7 +115,6 @@ window.initPi = async () => {
         const auth = await Pi.authenticate(['username', 'payments']);
         user = auth.user;
         
-        // تحديث الواجهة بعد الدخول
         document.getElementById("user-greeting").innerHTML = `مرحباً، <span class="font-bold text-teal-600">${user.username}</span>`;
         document.getElementById("profile-name").textContent = user.username;
         document.getElementById("profile-status").textContent = "مستخدم موثق ✓";
@@ -140,30 +137,46 @@ window.switchPage = (id, el) => {
     window.scrollTo(0,0);
 };
 
+// ====================== الدالة المحسنة (المهمة) ======================
 window.book = async (s) => {
     if (isBooking) return;
-    if (!user) { await initPi(); if(!user) return; }
-    
-    if (!confirm(`هل تود تأكيد حجزك في ${s.name} مقابل ${s.price} Pi؟`)) return;
-    
+    if (!user) {
+        alert("يرجى تسجيل الدخول أولاً");
+        await initPi();
+        if (!user) return;
+    }
+
+    if (!confirm(`هل تود حجز موعد في ${s.name} بـ ${s.price} Pi؟`)) return;
+
     isBooking = true;
+
     try {
         await Pi.createPayment({
             amount: s.price,
-            memo: `حجز في ${s.name} - ZAYN PI`,
-            metadata: { salonId: s.id }
+            memo: `حجز ${s.name} - ZAYN PI`,
+            metadata: { salonId: s.id, salonName: s.name }
         }, {
             onReadyForServerApproval: async (paymentId) => {
+                console.log("→ جاري الموافقة على الدفع...", paymentId);
+
                 const res = await fetch('/api/approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentId })
                 });
+
                 const data = await res.json();
-                if(!res.ok || !data.success) throw new Error("السيرفر لم يوافق على الدفع");
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || "فشل في موافقة السيرفر");
+                }
+                console.log("✅ تمت الموافقة من السيرفر");
                 return data;
             },
+
             onReadyForServerCompletion: async (paymentId, txid) => {
+                console.log("→ جاري إكمال الدفع...", txid);
+
+                // حفظ الحجز في Firebase
                 await addDoc(collection(db, "bookings"), {
                     user: user.username,
                     salon: s.name,
@@ -171,25 +184,44 @@ window.book = async (s) => {
                     txid: txid,
                     createdAt: serverTimestamp()
                 });
-                alert("✅ تم الحجز بنجاح! شكراً لاستخدامك Zayn Pi");
+
+                // إكمال الدفع عند Pi (مهم جداً)
+                await fetch('/api/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentId, txid })
+                });
+
+                alert(`✅ تم الحجز بنجاح!\nرقم المعاملة: ${txid.slice(0, 12)}...`);
                 isBooking = false;
                 switchPage('bookings-page');
             },
-            onCancel: () => { isBooking = false; },
-            onError: (e) => { 
-                alert("خطأ أثناء الدفع: " + e.message); 
-                isBooking = false; 
+
+            onCancel: () => {
+                console.log("تم إلغاء الدفع من المستخدم");
+                isBooking = false;
+            },
+
+            onError: (error) => {
+                console.error("Payment error:", error);
+                alert("خطأ في عملية الدفع: " + (error.message || error));
+                isBooking = false;
             }
         });
-    } catch (e) { 
-        alert("حدث خطأ تقني"); 
+    } catch (e) {
+        console.error("خطأ أثناء بدء الدفع:", e);
+        alert("حدث خطأ تقني أثناء بدء عملية الدفع");
         isBooking = false;
     }
 };
+// =====================================================================
 
 async function loadBookings() {
     const list = document.getElementById("my-bookings-list");
-    if (!user) { list.innerHTML = "<p class='text-center mt-10 text-gray-400'>سجل دخولك لرؤية سجل حجوزاتك</p>"; return; }
+    if (!user) { 
+        list.innerHTML = "<p class='text-center mt-10 text-gray-400'>سجل دخولك لرؤية سجل حجوزاتك</p>"; 
+        return; 
+    }
     
     list.innerHTML = "<div class='text-center py-10'><i class='fas fa-circle-notch fa-spin text-teal-500 text-3xl'></i><p class='mt-2 text-sm text-gray-400'>جاري جلب البيانات...</p></div>";
     
@@ -209,7 +241,7 @@ async function loadBookings() {
             <div class="card p-6 border-r-8 border-teal-500 flex justify-between items-center shadow-sm">
                 <div>
                     <h4 class="font-bold text-gray-800">${b.salon}</h4>
-                    <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-mono">ID: ${b.txid.slice(0,10)}...</p>
+                    <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-mono">ID: ${b.txid ? b.txid.slice(0,10) : '---'}...</p>
                     <p class="text-[10px] text-teal-600 mt-1"><i class="far fa-clock"></i> ${date}</p>
                 </div>
                 <div class="text-right">
@@ -219,11 +251,12 @@ async function loadBookings() {
             </div>`;
         }).join('');
     } catch (e) { 
+        console.error(e);
         list.innerHTML = "<p class='text-red-500 text-center font-bold'>عفواً، فشل تحميل البيانات من قاعدة البيانات</p>"; 
     }
 }
 
-// بناء الصالونات
+// بناء قائمة الصالونات
 document.getElementById("salon-container").innerHTML = salons.map(s => `
     <div class="card shadow-lg border border-gray-50">
         <div class="relative">
@@ -243,14 +276,15 @@ document.getElementById("salon-container").innerHTML = salons.map(s => `
                     <span class="text-[10px] text-teal-400 font-bold uppercase tracking-tighter">Pi Coin</span>
                 </div>
             </div>
-            <button onclick='window.book(${JSON.stringify(s)})' class="w-full mt-6 py-4 btn-pi rounded-2xl font-bold text-lg active:scale-95 transition-transform shadow-lg">
+            <button onclick='window.book(${JSON.stringify(s)})' 
+                    class="w-full mt-6 py-4 btn-pi rounded-2xl font-bold text-lg active:scale-95 transition-transform shadow-lg">
                 احجز موعدك الآن
             </button>
         </div>
     </div>
 `).join('');
 
-// محاولة الدخول التلقائي عند التحميل
+// محاولة الدخول التلقائي
 window.addEventListener('load', () => {
     if (window.Pi) initPi();
 });
