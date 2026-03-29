@@ -1,29 +1,82 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>الملف الشخصي</title>
-
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي - ZAYN PI</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f8f9fa; }
+        .profile-card {
+            background: white;
+            border-radius: 24px;
+            padding: 32px 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+            text-align: center;
+            margin: 20px 0;
+        }
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background: #14b8a6;
+            color: white;
+            font-size: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            border: 5px solid white;
+            box-shadow: 0 8px 20px rgba(20, 184, 166, 0.3);
+        }
+        .btn {
+            padding: 14px 24px;
+            border-radius: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+        .btn-blue { background: #3b82f6; color: white; }
+        .btn-green { background: #14b8a6; color: white; }
+        .btn:hover { transform: translateY(-2px); }
+    </style>
 </head>
+<body class="p-4 pb-24">
 
-<body>
+    <div class="max-w-md mx-auto">
+        <h2 class="text-3xl font-bold text-center mb-10 text-teal-700">الملف الشخصي</h2>
 
-<h2>الملف الشخصي</h2>
+        <div class="profile-card" id="profile-card">
+            <div class="avatar" id="avatar">👤</div>
+            <h3 id="username" class="text-2xl font-bold text-gray-800">زائر</h3>
+            <p id="status" class="text-gray-500 mt-1">غير مسجل الدخول</p>
+            
+            <div class="mt-8 space-y-3" id="buttons-area">
+                <!-- يتم تغيير الأزرار حسب حالة الدخول -->
+            </div>
+        </div>
 
-<button class="btn blue">تسجيل عبر Pi</button>
-<button class="btn green">سجّل صالونك</button>
+        <div class="text-center text-sm text-gray-500 mt-8">
+            <p>مدعوم بواسطة Pi Network</p>
+        </div>
+    </div>
 
-<nav class="nav">
-<a href="index.html">🏠</a>
-<a href="bookings.html">📅</a>
-<a href="profile.html">👤</a>
-</nav>
+    <nav class="nav fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-3">
+        <div class="flex justify-around max-w-md mx-auto">
+            <a href="index.html" class="text-2xl">🏠</a>
+            <a href="bookings.html" class="text-2xl">📅</a>
+            <a href="profile.html" class="text-2xl text-teal-600">👤</a>
+        </div>
+    </nav>
+
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
@@ -37,12 +90,95 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// نجعلها متاحة لباقي الكود
-window.db = db;
-window.collection = collection;
-window.addDoc = addDoc;
-window.getDocs = getDocs;
+let user = null;
 
+// تحميل المستخدم من localStorage
+function loadUser() {
+    const savedUser = localStorage.getItem("piUser");
+    if (savedUser) {
+        user = JSON.parse(savedUser);
+    }
+}
+
+// عرض بيانات الملف الشخصي
+function renderProfile() {
+    const avatar = document.getElementById("avatar");
+    const usernameEl = document.getElementById("username");
+    const statusEl = document.getElementById("status");
+    const buttonsArea = document.getElementById("buttons-area");
+
+    if (user && user.username) {
+        avatar.textContent = "✅";
+        avatar.style.background = "#14b8a6";
+        usernameEl.textContent = user.username;
+        statusEl.textContent = "مستخدم موثق ✓";
+        statusEl.classList.add("text-teal-600");
+
+        buttonsArea.innerHTML = `
+            <button onclick="logout()" class="btn bg-red-500 text-white">
+                تسجيل خروج
+            </button>
+            <button onclick="registerSalon()" class="btn btn-green">
+                <i class="fas fa-store mr-2"></i> سجّل صالونك
+            </button>
+        `;
+    } else {
+        avatar.textContent = "👤";
+        avatar.style.background = "#64748b";
+        usernameEl.textContent = "زائر";
+        statusEl.textContent = "غير مسجل الدخول";
+        statusEl.classList.remove("text-teal-600");
+
+        buttonsArea.innerHTML = `
+            <button onclick="loginWithPi()" class="btn btn-blue">
+                <i class="fab fa-raspberry-pi mr-2"></i> تسجيل الدخول عبر Pi
+            </button>
+            <button onclick="registerSalon()" class="btn btn-green">
+                <i class="fas fa-store mr-2"></i> سجّل صالونك
+            </button>
+        `;
+    }
+}
+
+// تسجيل الدخول عبر Pi
+window.loginWithPi = async () => {
+    try {
+        await Pi.init({ version: "2.0", sandbox: true });
+        
+        const auth = await Pi.authenticate(['username', 'payments']);
+        user = auth.user;
+
+        // حفظ بيانات المستخدم
+        localStorage.setItem("piUser", JSON.stringify(user));
+
+        alert(`مرحباً ${user.username}! تم تسجيل الدخول بنجاح`);
+        renderProfile();
+    } catch (e) {
+        console.error(e);
+        alert("فشل تسجيل الدخول. يرجى المحاولة من داخل Pi Browser");
+    }
+};
+
+// تسجيل خروج
+window.logout = () => {
+    if (confirm("هل أنت متأكد من تسجيل الخروج؟")) {
+        localStorage.removeItem("piUser");
+        user = null;
+        renderProfile();
+    }
+};
+
+// زر تسجيل صالون (جاهز للتطوير لاحقاً)
+window.registerSalon = () => {
+    alert("ميزة تسجيل الصالون قيد التطوير.\nسيتم إضافتها قريباً إن شاء الله");
+    // يمكنك هنا توجيه المستخدم إلى صفحة أخرى في المستقبل
+};
+
+window.addEventListener('load', () => {
+    loadUser();
+    renderProfile();
+});
 </script>
+
 </body>
 </html>
