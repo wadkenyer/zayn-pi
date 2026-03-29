@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <style>
-        :root { --teal: #4DAF9F; --dark-teal: #3A8A7A; }
-        body { background: #F8F9FA; font-family: system-ui, sans-serif; }
+        :root { --teal: #4DAF9F; --dark-teal: #3A8A7A; --bg: #F8F9FA; }
+        body { background: var(--bg); font-family: system-ui, sans-serif; }
         .card { background: #fff; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); overflow: hidden; }
         .page { display: none; }
         .page.active { display: block; }
@@ -17,17 +17,18 @@
         .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #888; }
         .nav-item.active { color: var(--teal); }
         .btn-pi { background: linear-gradient(135deg, var(--teal), var(--dark-teal)); color: white; }
+        .btn-pi:disabled { opacity: 0.7; cursor: not-allowed; }
     </style>
 </head>
-<body class="p-4 pb-28">
+<body class="p-4 pb-28 min-h-screen">
 
 <div id="home-page" class="page active">
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-black text-teal-600">ZAYN PI</h1>
-            <p id="user-greeting" class="text-sm text-gray-500">جاري التحقق...</p>
+            <p id="user-greeting" class="text-sm text-gray-500">جاري التحقق من حسابك...</p>
         </div>
-        <button onclick="initPi()" class="px-6 py-2 bg-teal-600 text-white rounded-2xl text-sm">دخول بـ Pi</button>
+        <button onclick="initPi()" class="px-6 py-2 bg-teal-600 text-white rounded-2xl text-sm font-medium">دخول بـ Pi</button>
     </div>
 
     <h2 class="text-xl font-bold mb-6">الصالونات المميزة</h2>
@@ -74,10 +75,10 @@ const salons = [
     {id:"s3", name:"باربيرا برو", city:"الرياض", price:0.8, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
 ];
 
-// معالجة الدفعات المعلقة
+// معالجة الدفعات المعلقة (مهم جداً)
 const onIncompletePaymentFound = async (payment) => {
     const paymentId = payment.identifier || payment.paymentId;
-    console.log("⚠️ Pending payment:", payment);
+    console.log("⚠️ Pending payment found:", payment);
 
     try {
         if (payment.status === 'INITIATED') {
@@ -87,7 +88,9 @@ const onIncompletePaymentFound = async (payment) => {
         } else {
             await fetch('/api/pi/cancel', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ paymentId }) });
         }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error("Error handling incomplete payment:", e);
+    }
 };
 
 window.initPi = async () => {
@@ -98,6 +101,7 @@ window.initPi = async () => {
 
         document.getElementById("user-greeting").innerHTML = `مرحباً، <span class="font-bold text-teal-600">${currentUser.username}</span>`;
         document.getElementById("profile-name").textContent = currentUser.username;
+        document.getElementById("profile-status").textContent = "متصل ✓";
     } catch (e) {
         console.error(e);
         alert("يرجى فتح التطبيق داخل Pi Browser");
@@ -116,7 +120,7 @@ window.book = async (salon) => {
 
     isProcessingPayment = true;
 
-    if (!confirm(`دفع ${salon.price} Pi لحجز في ${salon.name}؟`)) {
+    if (!confirm(`هل تريد دفع ${salon.price} Pi لحجز في ${salon.name}؟`)) {
         isProcessingPayment = false;
         return;
     }
@@ -138,12 +142,14 @@ window.book = async (salon) => {
             },
 
             onReadyForServerCompletion: async (paymentId, txid) => {
+                // إكمال الدفع
                 await fetch('/api/pi/complete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentId, txid })
                 });
 
+                // التحقق النهائي
                 const verifyRes = await fetch('/api/pi/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -160,10 +166,11 @@ window.book = async (salon) => {
                         status: "confirmed",
                         createdAt: serverTimestamp()
                     });
-                    alert(`✅ تم الحجز بنجاح!\nTx: ${txid.slice(0,12)}...`);
+
+                    alert(`✅ تم الحجز بنجاح!\nرقم المعاملة: ${txid.slice(0,12)}...`);
                     switchPage('bookings-page');
                 } else {
-                    alert("⚠️ الدفع لم يكتمل بشكل كامل");
+                    alert("⚠️ الدفع تم تسجيله لكنه لم يكتمل بشكل كامل");
                 }
             },
 
@@ -172,6 +179,7 @@ window.book = async (salon) => {
         });
     } catch (e) {
         console.error(e);
+        alert("حدث خطأ أثناء بدء الدفع");
     } finally {
         isProcessingPayment = false;
     }
@@ -183,10 +191,10 @@ async function loadBookings() {
         list.innerHTML = "<p class='text-center text-gray-400 py-10'>سجل الدخول لرؤية حجوزاتك</p>";
         return;
     }
-    // يمكنك لصق كود loadBookings القديم هنا
+    // يمكنك إضافة كود loadBookings القديم هنا إذا أردت
 }
 
-// عرض الصالونات
+// بناء الصالونات
 document.getElementById("salon-container").innerHTML = salons.map(s => `
     <div class="card">
         <img src="${s.img}" class="w-full h-52 object-cover">
@@ -194,14 +202,14 @@ document.getElementById("salon-container").innerHTML = salons.map(s => `
             <h3 class="font-bold text-xl">${s.name}</h3>
             <p class="text-gray-500">${s.city}</p>
             <div class="mt-6 flex justify-between items-center">
-                <div class="text-2xl font-bold text-teal-600">${s.price} Pi</div>
+                <div class="text-2xl font-bold text-teal-600">${s.price} <span class="text-base text-gray-400">Pi</span></div>
                 <button onclick='window.book(${JSON.stringify(s)})' class="btn-pi px-8 py-3 rounded-2xl font-bold">احجز الآن</button>
             </div>
         </div>
     </div>
 `).join('');
 
-initPi();
+initPi(); // بدء تلقائي
 </script>
 </body>
 </html>
