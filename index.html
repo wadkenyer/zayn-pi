@@ -66,7 +66,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let currentUser = null;
-let isProcessing = false;
 
 const salons = [
     {id:"s1", name:"صالون الملكي", city:"القاهرة", price:0.5, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600"},
@@ -74,23 +73,16 @@ const salons = [
     {id:"s3", name:"باربيرا برو", city:"الرياض", price:0.8, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
 ];
 
-const onIncompletePaymentFound = async (payment) => {
-    console.log("⚠️ دفع معلق تم اكتشافه:", payment);
-};
-
 window.initPi = async () => {
     try {
         await Pi.init({ version: "2.0", sandbox: true });
-        const auth = await Pi.authenticate(['username', 'payments'], onIncompletePaymentFound);
+        const auth = await Pi.authenticate(['username', 'payments']);
         currentUser = auth.user;
 
         document.getElementById("user-greeting").innerHTML = `مرحباً، <span class="font-bold text-teal-600">${currentUser.username}</span>`;
         document.getElementById("profile-name").textContent = currentUser.username;
         document.getElementById("profile-status").textContent = "متصل ✓";
-        
-        alert(`✅ تم تسجيل الدخول بنجاح!\nمرحبا ${currentUser.username}`);
     } catch (e) {
-        console.error(e);
         alert("يرجى فتح التطبيق داخل Pi Browser");
     }
 };
@@ -102,46 +94,24 @@ window.switchPage = (pageId) => {
 };
 
 window.book = async (salon) => {
-    if (isProcessing) return alert("جاري معالجة طلب سابق...");
-    if (!currentUser) return alert("يرجى الضغط على زر 'دخول بـ Pi' أولاً");
+    if (!currentUser) return alert("يرجى تسجيل الدخول أولاً");
 
-    isProcessing = true;
-
-    if (!confirm(`هل تريد دفع ${salon.price} Pi لحجز في ${salon.name}؟`)) {
-        isProcessing = false;
-        return;
-    }
+    if (!confirm(`هل تريد دفع ${salon.price} Pi لحجز ${salon.name}؟`)) return;
 
     try {
         const paymentData = {
             amount: salon.price,
             memo: `حجز ${salon.name} - ZAYN PI`,
-            metadata: { 
-                salonId: salon.id, 
-                user: currentUser.username,
-                city: salon.city 
-            }
+            metadata: { salon: salon.name, user: currentUser.username }
         };
 
         await Pi.createPayment(paymentData, {
             onReadyForServerApproval: async (paymentId) => {
-                console.log(`[Frontend] onReadyForServerApproval: ${paymentId}`);
-                await fetch('/api/approve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentId })
-                });
+                await fetch('/api/approve', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({paymentId}) });
             },
 
             onReadyForServerCompletion: async (paymentId, txid) => {
-                console.log(`[Frontend] onReadyForServerCompletion - TxID: ${txid}`);
-
-                // استدعاء الـ complete (Mock)
-                await fetch('/api/complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentId, txid })
-                });
+                console.log("✅ الدفع اكتمل | TxID:", txid);
 
                 // حفظ الحجز في Firebase
                 await addDoc(collection(db, "bookings"), {
@@ -154,21 +124,15 @@ window.book = async (salon) => {
                     createdAt: serverTimestamp()
                 });
 
-                alert(`✅ تم الحجز بنجاح في ${salon.name}!\nرقم المعاملة: ${txid ? txid.substring(0, 15) + '...' : 'تم تسجيله'}`);
+                alert(`✅ تم الحجز بنجاح في ${salon.name}!\nرقم المعاملة: ${txid ? txid.substring(0,15)+'...' : 'تم'}`);
                 switchPage('bookings-page');
             },
 
-            onCancel: () => alert("تم إلغاء الدفع من قبل المستخدم"),
-            onError: (err) => {
-                console.error(err);
-                alert("خطأ في عملية الدفع: " + (err.message || err));
-            }
+            onCancel: () => alert("تم إلغاء الدفع"),
+            onError: (err) => alert("خطأ في الدفع: " + (err.message || err))
         });
     } catch (e) {
-        console.error(e);
-        alert("حدث خطأ أثناء بدء عملية الدفع");
-    } finally {
-        isProcessing = false;
+        alert("حدث خطأ أثناء الدفع");
     }
 };
 
@@ -195,10 +159,10 @@ async function loadBookings() {
             const b = doc.data();
             html += `
             <div class="card p-6 border-r-8 border-teal-500">
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between">
                     <div>
                         <h4 class="font-bold">${b.salon}</h4>
-                        <p class="text-xs text-gray-400">${b.city || ''} • Tx: ${b.txid ? b.txid.substring(0,12)+'...' : 'تم'}</p>
+                        <p class="text-xs text-gray-400">${b.city} • Tx: ${b.txid ? b.txid.substring(0,12)+'...' : ''}</p>
                     </div>
                     <div class="text-right">
                         <div class="text-teal-600 font-black text-2xl">${b.amount}</div>
@@ -209,8 +173,7 @@ async function loadBookings() {
         });
         list.innerHTML = html;
     } catch (e) {
-        console.error(e);
-        list.innerHTML = "<p class='text-red-500 text-center py-10'>خطأ في تحميل الحجوزات</p>";
+        list.innerHTML = "<p class='text-red-500 text-center'>خطأ في تحميل الحجوزات</p>";
     }
 }
 
@@ -224,199 +187,6 @@ document.getElementById("salon-container").innerHTML = salons.map(s => `
             <div class="mt-6 flex justify-between items-center">
                 <div class="text-2xl font-bold text-teal-600">${s.price} <span class="text-base text-gray-400">Pi</span></div>
                 <button onclick='window.book(${JSON.stringify(s)})' class="btn-pi px-8 py-3 rounded-2xl font-bold">احجز الآن</button>
-            </div>
-        </div>
-    </div>
-`).join('');
-</script>
-</body>
-</html><div id="bookings-page" class="page">
-    <h2 class="text-2xl font-bold text-center mb-6">حجوزاتي</h2>
-    <div id="my-bookings-list" class="space-y-4"></div>
-</div>
-
-<div id="profile-page" class="page text-center">
-    <div class="card p-10 mx-auto max-w-xs">
-        <div class="w-24 h-24 mx-auto bg-teal-100 rounded-full flex items-center justify-center text-6xl mb-4">👤</div>
-        <h3 id="profile-name" class="text-2xl font-bold">زائر</h3>
-        <p id="profile-status" class="text-gray-500">مستخدم Pi Network</p>
-    </div>
-</div>
-
-<nav class="bottom-nav">
-    <div class="nav-item active" onclick="switchPage('home-page', this)"><i class="fas fa-home text-2xl"></i><span class="text-xs">الرئيسية</span></div>
-    <div class="nav-item" onclick="switchPage('bookings-page', this)"><i class="fas fa-calendar-check text-2xl"></i><span class="text-xs">حجوزاتي</span></div>
-    <div class="nav-item" onclick="switchPage('profile-page', this)"><i class="fas fa-user text-2xl"></i><span class="text-xs">حسابي</span></div>
-</nav>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
-  authDomain: "zayn-pi.firebaseapp.com",
-  projectId: "zayn-pi",
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let currentUser = null;
-let isProcessing = false;
-
-const salons = [
-    {id:"s1", name:"صالون الملكي", city:"القاهرة", price:0.5, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600"},
-    {id:"s2", name:"Luxury Beauty", city:"دبي", price:1.0, rate:4.9, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600"},
-    {id:"s3", name:"باربيرا برو", city:"الرياض", price:0.8, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
-];
-
-const onIncompletePaymentFound = async (payment) => {
-    console.log("⚠️ دفع معلق:", payment);
-    // يمكنك إضافة معالجة إضافية هنا إذا أردت
-};
-
-window.initPi = async () => {
-    try {
-        await Pi.init({ version: "2.0", sandbox: true });
-        const auth = await Pi.authenticate(['username', 'payments'], onIncompletePaymentFound);
-        currentUser = auth.user;
-
-        document.getElementById("user-greeting").innerHTML = `مرحباً، <span class="font-bold text-teal-600">${currentUser.username}</span>`;
-        document.getElementById("profile-name").textContent = currentUser.username;
-        document.getElementById("profile-status").textContent = "متصل ✓";
-        
-        alert("تم تسجيل الدخول بنجاح!");
-    } catch (e) {
-        console.error(e);
-        alert("يرجى فتح التطبيق داخل Pi Browser");
-    }
-};
-
-window.switchPage = (pageId) => {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(pageId).classList.add('active');
-    if (pageId === 'bookings-page') loadBookings();
-};
-
-window.book = async (salon) => {
-    if (isProcessing) return alert("جاري معالجة طلب سابق...");
-    if (!currentUser) return alert("يرجى تسجيل الدخول أولاً بضغط زر 'دخول بـ Pi'");
-
-    isProcessing = true;
-
-    if (!confirm(`هل تريد دفع ${salon.price} Pi لحجز في ${salon.name}؟`)) {
-        isProcessing = false;
-        return;
-    }
-
-    try {
-        const paymentData = {
-            amount: salon.price,
-            memo: `حجز ${salon.name} - ZAYN PI`,
-            metadata: { salonId: salon.id, user: currentUser.username, city: salon.city }
-        };
-
-        await Pi.createPayment(paymentData, {
-            onReadyForServerApproval: async (paymentId) => {
-                console.log(`[Frontend] onReadyForServerApproval: ${paymentId}`);
-                await fetch('/api/approve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentId })
-                });
-            },
-
-            onReadyForServerCompletion: async (paymentId, txid) => {
-                console.log(`[Frontend] onReadyForServerCompletion - TxID: ${txid}`);
-
-                // إكمال الدفع على السيرفر
-                await fetch('/api/complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentId, txid })
-                });
-
-                // حفظ الحجز في Firebase
-                await addDoc(collection(db, "bookings"), {
-                    user: currentUser.username,
-                    salon: salon.name,
-                    city: salon.city,
-                    amount: salon.price,
-                    txid: txid,
-                    status: "confirmed",
-                    createdAt: serverTimestamp()
-                });
-
-                alert(`✅ تم الحجز بنجاح في ${salon.name}!\nرقم المعاملة: ${txid.substring(0, 15)}...`);
-                switchPage('bookings-page');
-            },
-
-            onCancel: () => alert("تم إلغاء الدفع"),
-            onError: (err) => {
-                console.error(err);
-                alert("خطأ في الدفع: " + (err.message || err));
-            }
-        });
-    } catch (e) {
-        console.error(e);
-        alert("حدث خطأ أثناء بدء الدفع");
-    } finally {
-        isProcessing = false;
-    }
-};
-
-async function loadBookings() {
-    const list = document.getElementById("my-bookings-list");
-    if (!currentUser) {
-        list.innerHTML = "<p class='text-center text-gray-400 py-10'>سجل الدخول لرؤية حجوزاتك</p>";
-        return;
-    }
-
-    list.innerHTML = "<div class='text-center py-10'><i class='fas fa-circle-notch fa-spin text-teal-500 text-3xl'></i></div>";
-
-    try {
-        const q = query(collection(db, "bookings"), where("user", "==", currentUser.username), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-
-        if (snap.empty) {
-            list.innerHTML = "<p class='text-center text-gray-400 py-10'>لا توجد حجوزات بعد</p>";
-            return;
-        }
-
-        let html = '';
-        snap.forEach(doc => {
-            const b = doc.data();
-            html += `
-            <div class="card p-6 border-r-8 border-teal-500">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h4 class="font-bold text-lg">${b.salon}</h4>
-                        <p class="text-xs text-gray-400">${b.city} • Tx: ${ (b.txid || '').substring(0,12) }...</p>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-teal-600 font-black text-2xl">${b.amount}</div>
-                        <div class="text-xs text-gray-400">Pi</div>
-                    </div>
-                </div>
-            </div>`;
-        });
-        list.innerHTML = html;
-    } catch (e) {
-        console.error(e);
-        list.innerHTML = "<p class='text-red-500 text-center py-10'>خطأ في تحميل الحجوزات</p>";
-    }
-}
-
-// بناء قائمة الصالونات
-document.getElementById("salon-container").innerHTML = salons.map(s => `
-    <div class="card">
-        <img src="${s.img}" class="w-full h-52 object-cover">
-        <div class="p-5">
-            <h3 class="font-bold text-xl">${s.name}</h3>
-            <p class="text-gray-500">${s.city}</p>
-            <div class="mt-6 flex justify-between items-center">
-                <div class="text-2xl font-bold text-teal-600">${s.price} <span class="text-base text-gray-400">Pi</span></div>
-                <button onclick='window.book(${JSON.stringify(s)})' class="btn-pi px-8 py-3 rounded-2xl font-bold active:scale-95">احجز الآن</button>
             </div>
         </div>
     </div>
