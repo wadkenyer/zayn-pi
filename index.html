@@ -8,66 +8,29 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <style>
-        :root { --teal: #4DAF9F; --dark-teal: #3A8A7A; --bg: #F8F9FA; }
-        body { background: var(--bg); font-family: system-ui, sans-serif; }
-        .card { background: #fff; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); overflow: hidden; transition: all 0.3s ease; }
-        .card:active { transform: scale(0.98); }
-        .page { display: none; animation: fadeIn 0.3s ease; }
+        :root { --teal: #4DAF9F; --dark-teal: #3A8A7A; }
+        body { background: #F8F9FA; font-family: system-ui, sans-serif; }
+        .card { background: #fff; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); overflow: hidden; }
+        .page { display: none; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #eee; z-index: 1000; }
         .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #888; }
         .nav-item.active { color: var(--teal); }
-        .btn-pi { background: linear-gradient(135deg, var(--teal), var(--dark-teal)); color: white; box-shadow: 0 4px 15px rgba(77,175,159,0.3); }
-        .btn-pi:disabled { opacity: 0.7; cursor: not-allowed; }
-        /* Sidebar */
-        .sidebar { transform: translateX(100%); transition: all 0.4s ease; }
-        .sidebar.open { transform: translateX(0); }
+        .btn-pi { background: linear-gradient(135deg, var(--teal), var(--dark-teal)); color: white; }
     </style>
 </head>
 <body class="p-4 pb-28 min-h-screen">
 
-<!-- زر فتح القائمة الجانبية -->
-<button onclick="toggleSidebar()" class="fixed top-6 right-6 z-50 bg-white shadow-lg p-3 rounded-2xl text-2xl text-gray-700">
-    <i class="fas fa-bars"></i>
-</button>
-
-<!-- Sidebar (القائمة الجانبية) -->
-<div id="sidebar" class="sidebar fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-[100] p-6 overflow-y-auto">
-    <div class="flex justify-between items-center mb-8">
-        <h2 class="text-2xl font-bold text-teal-600">ZAYN PI</h2>
-        <button onclick="toggleSidebar()" class="text-3xl text-gray-500">✕</button>
-    </div>
-
-    <div class="space-y-2 text-lg">
-        <a href="#" onclick="toggleSidebar()" class="flex items-center gap-3 p-4 hover:bg-teal-50 rounded-2xl"><i class="fas fa-home"></i> الرئيسية</a>
-        <a href="#" onclick="toggleSidebar()" class="flex items-center gap-3 p-4 hover:bg-teal-50 rounded-2xl"><i class="fas fa-store"></i> سجل صالونك</a>
-        <a href="#" onclick="toggleSidebar()" class="flex items-center gap-3 p-4 hover:bg-teal-50 rounded-2xl"><i class="fas fa-wallet"></i> المحفظة</a>
-        <a href="#" onclick="toggleSidebar()" class="flex items-center gap-3 p-4 hover:bg-teal-50 rounded-2xl"><i class="fas fa-users"></i> المجتمع</a>
-        <a href="#" onclick="toggleSidebar()" class="flex items-center gap-3 p-4 hover:bg-teal-50 rounded-2xl"><i class="fas fa-star"></i> التقييمات والتعليقات</a>
-        <a href="#" onclick="toggleSidebar()" class="flex items-center gap-3 p-4 hover:bg-teal-50 rounded-2xl"><i class="fas fa-map-marked-alt"></i> الموقع على الخريطة</a>
-        <a href="#" onclick="toggleSidebar()" class="flex items-center gap-3 p-4 hover:bg-teal-50 rounded-2xl"><i class="fas fa-globe"></i> جميع الدول العربية</a>
-    </div>
-
-    <div class="mt-12 pt-6 border-t">
-        <button onclick="initPi()" class="w-full py-4 bg-teal-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2">
-            <i class="fab fa-raspberry-pi"></i> دخول بـ Pi
-        </button>
-    </div>
-</div>
-
-<!-- الصفحات الرئيسية -->
 <div id="home-page" class="page active">
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-black text-teal-600">ZAYN PI</h1>
-            <p id="user-greeting" class="text-sm text-gray-500">جاري التحقق من حسابك...</p>
+            <p id="user-greeting" class="text-sm text-gray-500">جاري التحقق...</p>
         </div>
+        <button onclick="initPi()" class="px-6 py-2 bg-teal-600 text-white rounded-2xl text-sm font-medium">دخول بـ Pi</button>
     </div>
 
-    <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-        <i class="fas fa-star text-yellow-400"></i> الصالونات المميزة
-    </h2>
+    <h2 class="text-xl font-bold mb-6">الصالونات المميزة</h2>
     <div id="salon-container" class="space-y-6"></div>
 </div>
 
@@ -95,15 +58,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
-    authDomain: "zayn-pi.firebaseapp.com",
-    projectId: "zayn-pi",
+  apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
+  authDomain: "zayn-pi.firebaseapp.com",
+  projectId: "zayn-pi",
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let currentUser = null;
-let isProcessingPayment = false;
+let isProcessing = false;
 
 const salons = [
     {id:"s1", name:"صالون الملكي", city:"القاهرة", price:0.5, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600"},
@@ -111,25 +74,9 @@ const salons = [
     {id:"s3", name:"باربيرا برو", city:"الرياض", price:0.8, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
 ];
 
-// معالجة الدفعات المعلقة
 const onIncompletePaymentFound = async (payment) => {
-    const paymentId = payment.identifier || payment.paymentId;
-    console.log("⚠️ Pending payment found:", payment);
-
-    try {
-        const status = payment.status;
-        if (status === 'INITIATED') {
-            await fetch('/api/approve', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ paymentId }) });
-        } else if (status === 'APPROVED') {
-            if (payment.transaction?.txid) {
-                await fetch('/api/complete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ paymentId, txid: payment.transaction.txid }) });
-            }
-        } else {
-            await fetch('/api/cancel', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ paymentId }) });
-        }
-    } catch (e) {
-        console.error("Error handling incomplete payment:", e);
-    }
+    console.log("⚠️ دفع معلق:", payment);
+    // يمكنك إضافة معالجة إضافية هنا إذا أردت
 };
 
 window.initPi = async () => {
@@ -141,14 +88,12 @@ window.initPi = async () => {
         document.getElementById("user-greeting").innerHTML = `مرحباً، <span class="font-bold text-teal-600">${currentUser.username}</span>`;
         document.getElementById("profile-name").textContent = currentUser.username;
         document.getElementById("profile-status").textContent = "متصل ✓";
+        
+        alert("تم تسجيل الدخول بنجاح!");
     } catch (e) {
         console.error(e);
         alert("يرجى فتح التطبيق داخل Pi Browser");
     }
-};
-
-window.toggleSidebar = () => {
-    document.getElementById("sidebar").classList.toggle("open");
 };
 
 window.switchPage = (pageId) => {
@@ -158,13 +103,13 @@ window.switchPage = (pageId) => {
 };
 
 window.book = async (salon) => {
-    if (isProcessingPayment) return alert("جاري معالجة الدفع السابق...");
-    if (!currentUser) return alert("يرجى تسجيل الدخول أولاً");
+    if (isProcessing) return alert("جاري معالجة طلب سابق...");
+    if (!currentUser) return alert("يرجى تسجيل الدخول أولاً بضغط زر 'دخول بـ Pi'");
 
-    isProcessingPayment = true;
+    isProcessing = true;
 
     if (!confirm(`هل تريد دفع ${salon.price} Pi لحجز في ${salon.name}؟`)) {
-        isProcessingPayment = false;
+        isProcessing = false;
         return;
     }
 
@@ -172,11 +117,12 @@ window.book = async (salon) => {
         const paymentData = {
             amount: salon.price,
             memo: `حجز ${salon.name} - ZAYN PI`,
-            metadata: { salonId: salon.id, user: currentUser.username }
+            metadata: { salonId: salon.id, user: currentUser.username, city: salon.city }
         };
 
         await Pi.createPayment(paymentData, {
             onReadyForServerApproval: async (paymentId) => {
+                console.log(`[Frontend] onReadyForServerApproval: ${paymentId}`);
                 await fetch('/api/approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -185,44 +131,41 @@ window.book = async (salon) => {
             },
 
             onReadyForServerCompletion: async (paymentId, txid) => {
+                console.log(`[Frontend] onReadyForServerCompletion - TxID: ${txid}`);
+
+                // إكمال الدفع على السيرفر
                 await fetch('/api/complete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentId, txid })
                 });
 
-                const verifyRes = await fetch('/api/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentId })
+                // حفظ الحجز في Firebase
+                await addDoc(collection(db, "bookings"), {
+                    user: currentUser.username,
+                    salon: salon.name,
+                    city: salon.city,
+                    amount: salon.price,
+                    txid: txid,
+                    status: "confirmed",
+                    createdAt: serverTimestamp()
                 });
-                const verifyData = await verifyRes.json();
 
-                if (verifyData.status?.developer_completed === true && verifyData.status?.transaction_verified === true) {
-                    await addDoc(collection(db, "bookings"), {
-                        user: currentUser.username,
-                        salon: salon.name,
-                        amount: salon.price,
-                        txid: txid,
-                        status: "confirmed",
-                        createdAt: serverTimestamp()
-                    });
-
-                    alert(`✅ تم الحجز بنجاح!\nرقم المعاملة: ${(txid || '').slice(0,12)}...`);
-                    switchPage('bookings-page');
-                } else {
-                    alert("⚠️ الدفع تم تسجيله لكنه لم يكتمل بشكل كامل");
-                }
+                alert(`✅ تم الحجز بنجاح في ${salon.name}!\nرقم المعاملة: ${txid.substring(0, 15)}...`);
+                switchPage('bookings-page');
             },
 
             onCancel: () => alert("تم إلغاء الدفع"),
-            onError: (err) => alert("خطأ في الدفع: " + (err.message || err))
+            onError: (err) => {
+                console.error(err);
+                alert("خطأ في الدفع: " + (err.message || err));
+            }
         });
     } catch (e) {
         console.error(e);
         alert("حدث خطأ أثناء بدء الدفع");
     } finally {
-        isProcessingPayment = false;
+        isProcessing = false;
     }
 };
 
@@ -244,27 +187,31 @@ async function loadBookings() {
             return;
         }
 
-        list.innerHTML = snap.docs.map(doc => {
+        let html = '';
+        snap.forEach(doc => {
             const b = doc.data();
-            return `
-            <div class="card p-6 border-r-8 border-teal-500 flex justify-between items-center">
-                <div>
-                    <h4 class="font-bold">${b.salon}</h4>
-                    <p class="text-xs text-gray-400">Tx: ${(b.txid || '').slice(0,12)}...</p>
-                </div>
-                <div class="text-right">
-                    <div class="text-teal-600 font-black text-xl">${b.amount}</div>
-                    <div class="text-xs text-gray-400">Pi</div>
+            html += `
+            <div class="card p-6 border-r-8 border-teal-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-lg">${b.salon}</h4>
+                        <p class="text-xs text-gray-400">${b.city} • Tx: ${ (b.txid || '').substring(0,12) }...</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-teal-600 font-black text-2xl">${b.amount}</div>
+                        <div class="text-xs text-gray-400">Pi</div>
+                    </div>
                 </div>
             </div>`;
-        }).join('');
+        });
+        list.innerHTML = html;
     } catch (e) {
         console.error(e);
-        list.innerHTML = "<p class='text-red-500 text-center'>خطأ في تحميل الحجوزات</p>";
+        list.innerHTML = "<p class='text-red-500 text-center py-10'>خطأ في تحميل الحجوزات</p>";
     }
 }
 
-// بناء الصالونات
+// بناء قائمة الصالونات
 document.getElementById("salon-container").innerHTML = salons.map(s => `
     <div class="card">
         <img src="${s.img}" class="w-full h-52 object-cover">
@@ -273,12 +220,11 @@ document.getElementById("salon-container").innerHTML = salons.map(s => `
             <p class="text-gray-500">${s.city}</p>
             <div class="mt-6 flex justify-between items-center">
                 <div class="text-2xl font-bold text-teal-600">${s.price} <span class="text-base text-gray-400">Pi</span></div>
-                <button onclick='window.book(${JSON.stringify(s)})' class="btn-pi px-8 py-3 rounded-2xl font-bold">احجز الآن</button>
+                <button onclick='window.book(${JSON.stringify(s)})' class="btn-pi px-8 py-3 rounded-2xl font-bold active:scale-95">احجز الآن</button>
             </div>
         </div>
     </div>
 `).join('');
-
 </script>
 </body>
 </html>
