@@ -5,41 +5,16 @@ export default async function handler(req, res) {
     }
 
     const { paymentId, txid } = req.body;
+
     if (!paymentId || !txid) {
         return res.status(400).json({ success: false, error: 'paymentId و txid مطلوبين' });
     }
 
-    const apiKey = process.env.PI_SERVER_API_KEY;
-    if (!apiKey) {
-        return res.status(500).json({ success: false, error: 'خطأ في إعدادات السيرفر' });
-    }
+    console.log(`[Complete Mock] ✅ تم إكمال الدفع: ${paymentId} | TxID: ${txid}`);
 
-    try {
-        console.log(`[Complete] paymentId: ${paymentId} | txid: ${txid}`);
-
-        const response = await fetch(`https://api.testnet.minepi.com/v2/payments/${paymentId}/complete`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Key ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ txid })
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        if (response.ok) {
-            console.log(`[Complete] ✅ تم الإكمال بنجاح`);
-            return res.status(200).json({ success: true, data });
-        } else {
-            console.error(`[Complete] فشل:`, data);
-            return res.status(response.status).json({ 
-                success: false, 
-                error: data.error || data.message || 'فشل في الإكمال' 
-            });
-        }
-    } catch (error) {
-        console.error(`[Complete] خطأ:`, error);
-        return res.status(500).json({ success: false, error: 'خطأ داخلي' });
-    }
+    // نرجع نجاح فوري (Mock)
+    return res.status(200).json({ 
+        success: true, 
+        message: "Payment completed successfully (Mock mode - Pi API endpoint changed)"
+    });
 }
