@@ -1,3 +1,4 @@
+// api/complete.js
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ success: false, error: 'Method Not Allowed' });
@@ -25,20 +26,20 @@ export default async function handler(req, res) {
             body: JSON.stringify({ txid })
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (response.ok) {
-            console.log(`[Complete] ✅ تم إكمال الدفع بنجاح`);
+            console.log(`[Complete] ✅ تم الإكمال بنجاح`);
             return res.status(200).json({ success: true, data });
         } else {
-            console.error(`[Complete] ❌ فشل:`, data);
+            console.error(`[Complete] فشل:`, data);
             return res.status(response.status).json({ 
                 success: false, 
-                error: data.error || 'فشل في إكمال الدفع' 
+                error: data.error || data.message || 'فشل في الإكمال' 
             });
         }
     } catch (error) {
-        console.error(`[Complete] Server Error:`, error);
+        console.error(`[Complete] خطأ:`, error);
         return res.status(500).json({ success: false, error: 'خطأ داخلي' });
     }
 }
