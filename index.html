@@ -19,7 +19,7 @@
         .btn-pi { background: linear-gradient(135deg, var(--teal), var(--dark-teal)); color: white; }
         .modal { animation: modalPop 0.3s ease forwards; }
         @keyframes modalPop { from { opacity: 0; transform: scale(0.95) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        .time-btn.active { background-color: #4DAF9F !important; color: white !important; border-color: #4DAF9F; }
+        .time-btn.active { @apply bg-teal-600 text-white border-teal-600; }
     </style>
 </head>
 <body class="p-4 pb-28 min-h-screen">
@@ -94,7 +94,7 @@ let currentUser = null;
 let selectedSalon = null;
 let selectedDateTime = null;
 
-const salons = [ /* نفس القائمة السابقة */ 
+const salons = [
     {id:"s1", name:"صالون الملكي", city:"القاهرة", price:0.5, rate:4.8, img:"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600"},
     {id:"s2", name:"Luxury Beauty", city:"دبي", price:1.0, rate:4.9, img:"https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600"},
     {id:"s3", name:"باربيرا برو", city:"الرياض", price:0.8, rate:4.7, img:"https://images.unsplash.com/photo-1556228720-195a672ee8b6?w=600"}
@@ -108,6 +108,7 @@ window.initPi = async () => {
 
         document.getElementById("user-greeting").innerHTML = `مرحباً، <span class="font-bold text-teal-600">${currentUser.username}</span>`;
         document.getElementById("profile-name").textContent = currentUser.username;
+        document.getElementById("profile-status").textContent = "متصل ✓";
     } catch (e) {
         alert("يرجى فتح التطبيق داخل Pi Browser");
     }
@@ -119,7 +120,6 @@ window.switchPage = (pageId) => {
     if (pageId === 'bookings-page') loadBookings();
 };
 
-// فتح المودال
 window.openBookingModal = function(salon) {
     if (!currentUser) return alert("يرجى تسجيل الدخول أولاً");
     
@@ -143,110 +143,17 @@ function generateTimeSlots() {
         const btn = document.createElement("button");
         btn.className = "py-3 text-sm font-medium rounded-2xl border border-gray-300 hover:border-teal-500 transition";
         btn.textContent = timeStr;
-        btn.onclick = () => selectTime(btn, timeStr);
+        btn.onclick = () => {
+            document.querySelectorAll("#time-slots button").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            selectedDateTime = `${document.getElementById("booking-date").value} ${timeStr}`;
+        };
         container.appendChild(btn);
     }
-}
-
-function selectTime(btn, time) {
-    document.querySelectorAll("#time-slots button").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    selectedDateTime = `${document.getElementById("booking-date").value} ${time}`;
 }
 
 window.closeModal = function() {
     document.getElementById("booking-modal").classList.add("hidden");
 };
 
-window.confirmBooking = async function() {
-    if (!selectedDateTime) return alert("يرجى اختيار الوقت");
-
-    try {
-        const paymentData = {
-            amount: selectedSalon.price,
-            memo: `حجز ${selectedSalon.name} - ${selectedDateTime}`,
-            metadata: { salon: selectedSalon.name, dateTime: selectedDateTime }
-        };
-
-        await Pi.createPayment(paymentData, {
-            onReadyForServerApproval: async (paymentId) => {
-                await fetch('/api/approve', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId}) });
-            },
-            onReadyForServerCompletion: async (paymentId, txid) => {
-                await addDoc(collection(db, "bookings"), {
-                    user: currentUser.username,
-                    salon: selectedSalon.name,
-                    city: selectedSalon.city,
-                    amount: selectedSalon.price,
-                    txid: txid,
-                    dateTime: selectedDateTime,
-                    status: "confirmed",
-                    createdAt: serverTimestamp()
-                });
-
-                alert(`✅ تم الحجز بنجاح!\n${selectedSalon.name}\n${selectedDateTime}`);
-                closeModal();
-                switchPage('bookings-page');
-            },
-            onCancel: () => alert("تم إلغاء الدفع"),
-            onError: (err) => alert("خطأ في الدفع")
-        });
-    } catch (e) {
-        alert("حدث خطأ أثناء الحجز");
-    }
-};
-
-async function loadBookings() {
-    const list = document.getElementById("my-bookings-list");
-    if (!currentUser) {
-        list.innerHTML = "<p class='text-center text-gray-400 py-10'>سجل الدخول لرؤية حجوزاتك</p>";
-        return;
-    }
-
-    list.innerHTML = "<div class='text-center py-10'><i class='fas fa-circle-notch fa-spin text-teal-500 text-3xl'></i></div>";
-
-    try {
-        const q = query(collection(db, "bookings"), where("user", "==", currentUser.username), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-
-        if (snap.empty) {
-            list.innerHTML = "<p class='text-center text-gray-400 py-10'>لا توجد حجوزات بعد</p>";
-            return;
-        }
-
-        let html = '';
-        snap.forEach(doc => {
-            const b = doc.data();
-            html += `
-            <div class="card p-6 border-r-8 border-teal-500">
-                <h4 class="font-bold">${b.salon}</h4>
-                <p class="text-teal-600 font-medium mt-1">${b.dateTime}</p>
-                <p class="text-xs text-gray-400 mt-2">Tx: ${b.txid ? b.txid.substring(0,12)+'...' : ''}</p>
-                <div class="text-right mt-3">
-                    <span class="text-teal-600 font-black">${b.amount} Pi</span>
-                </div>
-            </div>`;
-        });
-        list.innerHTML = html;
-    } catch (e) {
-        list.innerHTML = "<p class='text-red-500'>خطأ في تحميل الحجوزات</p>";
-    }
-}
-
-// بناء الصالونات
-document.getElementById("salon-container").innerHTML = salons.map(s => `
-    <div class="card">
-        <img src="${s.img}" class="w-full h-52 object-cover">
-        <div class="p-5">
-            <h3 class="font-bold text-xl">${s.name}</h3>
-            <p class="text-gray-500">${s.city}</p>
-            <div class="mt-6 flex justify-between items-center">
-                <div class="text-2xl font-bold text-teal-600">${s.price} <span class="text-base text-gray-400">Pi</span></div>
-                <button onclick="openBookingModal(${JSON.stringify(s)})" class="btn-pi px-8 py-3 rounded-2xl font-bold">احجز الآن</button>
-            </div>
-        </div>
-    </div>
-`).join('');
-</script>
-</body>
-</html>
+window.confirmBooking = async
