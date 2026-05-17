@@ -1,4 +1,109 @@
-<!DOCTYPE html> <html lang="ar" dir="rtl"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>ZAYN PI | منصة الحجز الذكي</title> <script src="https://cdn.tailwindcss.com"></script> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet"> <script src="https://sdk.minepi.com/pi-sdk.js"></script> <style> :root { --teal: #0ABFA3; --teal-dark: #089A85; --teal-light: #E6FAF8; --gold: #F5C842; --dark: #0F1923; --gray: #6B7280; --bg: #F4F7F6; --card-bg: #FFFFFF; --border: #E5E9E8; } * { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; padding-bottom: 90px; } /* ===== PAGES ===== */ .page { display: none; } .page.active { display: block; } /* ===== HEADER ===== */ .app-header { background: var(--dark); padding: 20px 20px 16px; position: sticky; top: 0; z-index: 100; } .header-top { display: flex; justify-content: space-between; align-items: center; } .logo { font-size: 26px; font-weight: 900; color: var(--teal); letter-spacing: -1px; } .logo span { color: #fff; } .pi-btn { background: var(--teal); color: #fff; border: none; padding: 8px 18px; border-radius: 50px; font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; } .pi-btn:hover { background: var(--teal-dark); transform: scale(1.03); } .user-badge { display: flex; align-items: center; gap: 8px; background: rgba(10,191,163,0.15); border: 1px solid rgba(10,191,163,0.3); padding: 6px 14px; border-radius: 50px; color: var(--teal); font-size: 13px; font-weight: 700; } /* ===== GENDER TABS ===== */ .gender-tabs { display: flex; gap: 10px; margin-top: 14px; } .gender-tab { flex: 1; padding: 10px; border-radius: 14px; border: 2px solid transparent; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 6px; } .gender-tab.active-men { background: rgba(10,191,163,0.2); border-color: var(--teal); color: var(--teal); } .gender-tab.active-women { background: rgba(245,100,150,0.2); border-color: #F56496; color: #F56496; } /* ===== CARDS ===== */ .salon-card { background: var(--card-bg); border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.07); transition: transform 0.2s, box-shadow 0.2s; margin-bottom: 16px; } .salon-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); } .salon-img { width: 100%; height: 180px; object-fit: cover; position: relative; } .salon-img-wrap { position: relative; } .availability-badge { position: absolute; top: 12px; left: 12px; padding: 5px 12px; border-radius: 50px; font-size: 12px; font-weight: 700; backdrop-filter: blur(10px); } .available { background: rgba(10,191,163,0.9); color: #fff; } .busy { background: rgba(239,68,68,0.9); color: #fff; } .category-badge { position: absolute; top: 12px; right: 12px; padding: 5px 12px; border-radius: 50px; font-size: 12px; font-weight: 700; backdrop-filter: blur(10px); } .men-badge { background: rgba(15,25,35,0.85); color: var(--teal); } .women-badge { background: rgba(15,25,35,0.85); color: #F56496; } .salon-body { padding: 16px; } .salon-name { font-size: 18px; font-weight: 900; margin-bottom: 4px; } .salon-meta { display: flex; align-items: center; gap: 12px; color: var(--gray); font-size: 13px; margin-bottom: 12px; } .rating { color: var(--gold); font-weight: 700; } .services-preview { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; } .service-tag { background: var(--teal-light); color: var(--teal-dark); padding: 4px 10px; border-radius: 50px; font-size: 12px; font-weight: 600; } .service-tag-women { background: #FFF0F6; color: #C4386B; } .salon-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border); } .price-range { font-size: 13px; color: var(--gray); } .price-range strong { color: var(--dark); font-size: 16px; } .book-btn { background: var(--dark); color: #fff; border: none; padding: 10px 22px; border-radius: 50px; font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; } .book-btn:hover { background: var(--teal); transform: scale(1.03); } .book-btn-women { background: #C4386B; } .book-btn-women:hover { background: #A02D59; } /* ===== BOTTOM NAV ===== */ .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 480px; left: 50%; transform: translateX(-50%); background: var(--dark); display: flex; justify-content: space-around; padding: 12px 0 16px; z-index: 1000; } .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: rgba(255,255,255,0.35); transition: color 0.2s; font-size: 11px; font-weight: 600; } .nav-item i { font-size: 20px; } .nav-item.active { color: var(--teal); } /* ===== MODAL ===== */ .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9000; align-items: flex-end; justify-content: center; } .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; } .modal-sheet { background: #fff; border-radius: 28px 28px 0 0; width: 100%; max-width: 480px; padding: 24px 20px 36px; animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); max-height: 90vh; overflow-y: auto; } @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } .modal-handle { width: 40px; height: 4px; background: #e0e0e0; border-radius: 4px; margin: 0 auto 20px; } .modal-title { font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 20px; } /* ===== SERVICE SELECT ===== */ .service-option { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border: 2px solid var(--border); border-radius: 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; } .service-option:hover { border-color: var(--teal); } .service-option.selected { border-color: var(--teal); background: var(--teal-light); } .service-option.selected-women { border-color: #F56496; background: #FFF0F6; } .service-name { font-weight: 700; font-size: 15px; } .service-duration { font-size: 12px; color: var(--gray); margin-top: 2px; } .service-price { font-weight: 900; font-size: 16px; color: var(--teal); } .service-price-women { color: #C4386B; } /* ===== DATE/TIME ===== */ .section-label { font-weight: 700; font-size: 14px; color: var(--gray); margin-bottom: 10px; margin-top: 16px; } .date-input { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: 16px; font-family: 'Cairo', sans-serif; font-size: 15px; outline: none; transition: border-color 0.2s; } .date-input:focus { border-color: var(--teal); } .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; } .time-btn { padding: 10px 6px; border: 2px solid var(--border); border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; background: #fff; transition: all 0.2s; color: var(--dark); } .time-btn:hover { border-color: var(--teal); color: var(--teal); } .time-btn.selected { background: var(--teal); border-color: var(--teal); color: #fff; } .time-btn.selected-women { background: #C4386B; border-color: #C4386B; color: #fff; } /* ===== CONFIRM BTN ===== */ .confirm-btn { width: 100%; padding: 16px; border: none; border-radius: 18px; font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 900; cursor: pointer; margin-top: 20px; transition: all 0.2s; background: var(--dark); color: #fff; } .confirm-btn:hover { background: var(--teal); transform: scale(1.02); } /* ===== BOOKINGS PAGE ===== */ .booking-card { background: var(--card-bg); border-radius: 18px; padding: 16px; margin-bottom: 12px; box-shadow: 0 3px 15px rgba(0,0,0,0.06); border-right: 5px solid var(--teal); } .booking-card-women { border-right-color: #F56496; } .booking-status { display: inline-block; padding: 3px 10px; border-radius: 50px; font-size: 11px; font-weight: 700; } .status-confirmed { background: #E6FAF8; color: var(--teal-dark); } .status-pending { background: #FFF7E0; color: #B8860B; } /* ===== PROFILE PAGE ===== */ .profile-header { background: var(--dark); padding: 30px 20px; text-align: center; } .avatar { width: 80px; height: 80px; border-radius: 50%; background: rgba(10,191,163,0.2); border: 3px solid var(--teal); display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 12px; } .profile-name { color: #fff; font-size: 22px; font-weight: 900; } .profile-sub { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 4px; } .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 20px; } .stat-box { background: var(--card-bg); border-radius: 16px; padding: 16px 10px; text-align: center; box-shadow: 0 3px 15px rgba(0,0,0,0.06); } .stat-value { font-size: 24px; font-weight: 900; color: var(--teal); } .stat-label { font-size: 11px; color: var(--gray); margin-top: 4px; } .loyalty-card { margin: 0 20px 16px; background: var(--dark); border-radius: 20px; padding: 20px; color: #fff; } .loyalty-title { font-size: 16px; font-weight: 900; margin-bottom: 12px; } .loyalty-bar-bg { background: rgba(255,255,255,0.1); border-radius: 50px; height: 10px; overflow: hidden; margin-bottom: 8px; } .loyalty-bar-fill { height: 100%; background: linear-gradient(90deg, var(--teal), #0FF0D0); border-radius: 50px; transition: width 1s ease; } .loyalty-hint { font-size: 12px; color: rgba(255,255,255,0.5); } .owner-toggle-btn { margin: 0 20px 16px; width: calc(100% - 40px); padding: 16px; border-radius: 18px; border: 2px solid var(--teal); background: var(--teal-light); color: var(--teal-dark); font-family: 'Cairo', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s; } .owner-toggle-btn:hover { background: var(--teal); color: #fff; } /* ===== OWNER DASHBOARD ===== */ #owner-dashboard { padding: 0 0 20px; } .owner-header { background: var(--dark); padding: 20px; color: #fff; } .owner-header h2 { font-size: 20px; font-weight: 900; } .owner-header p { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; } .revenue-card { background: linear-gradient(135deg, var(--teal), var(--teal-dark)); border-radius: 20px; padding: 24px; margin: 20px; color: #fff; box-shadow: 0 8px 30px rgba(10,191,163,0.3); } .revenue-label { font-size: 13px; opacity: 0.85; margin-bottom: 8px; } .revenue-amount { font-size: 40px; font-weight: 900; line-height: 1; } .revenue-sub { font-size: 13px; opacity: 0.75; margin-top: 8px; } .revenue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px; margin-bottom: 20px; } .mini-stat { background: var(--card-bg); border-radius: 16px; padding: 16px; box-shadow: 0 3px 15px rgba(0,0,0,0.06); } .mini-stat-label { font-size: 12px; color: var(--gray); margin-bottom: 6px; } .mini-stat-value { font-size: 22px; font-weight: 900; color: var(--dark); } .mini-stat-unit { font-size: 12px; color: var(--teal); font-weight: 700; } .section-title { font-size: 17px; font-weight: 900; padding: 0 20px; margin-bottom: 12px; color: var(--dark); } /* ===== AVAILABILITY TOGGLE ===== */ .availability-toggle-card { margin: 0 20px 20px; background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 3px 15px rgba(0,0,0,0.06); } .toggle-row { display: flex; justify-content: space-between; align-items: center; } .toggle-label { font-size: 15px; font-weight: 700; } .toggle-sub { font-size: 12px; color: var(--gray); margin-top: 3px; } .toggle-switch { width: 52px; height: 28px; border-radius: 50px; background: #e0e0e0; position: relative; cursor: pointer; transition: background 0.3s; } .toggle-switch.on { background: var(--teal); } .toggle-knob { width: 22px; height: 22px; border-radius: 50%; background: #fff; position: absolute; top: 3px; right: 3px; transition: transform 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); } .toggle-switch.on .toggle-knob { transform: translateX(-24px); } /* ===== SERVICES MANAGEMENT ===== */ .service-manage-card { background: var(--card-bg); border-radius: 16px; padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); } .service-manage-info { flex: 1; } .service-manage-name { font-weight: 700; font-size: 15px; } .service-manage-details { font-size: 12px; color: var(--gray); margin-top: 3px; } .service-manage-price { font-weight: 900; font-size: 16px; color: var(--teal); margin-left: 12px; } .edit-btn { background: var(--teal-light); color: var(--teal-dark); border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 14px; margin-right: 8px; transition: all 0.2s; } .edit-btn:hover { background: var(--teal); color: #fff; } .add-service-btn { width: calc(100% - 40px); margin: 0 20px 20px; padding: 14px; border: 2px dashed var(--teal); border-radius: 16px; background: transparent; color: var(--teal); font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; } .add-service-btn:hover { background: var(--teal-light); } /* ===== RECENT BOOKINGS (OWNER) ===== */ .recent-booking-item { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); } .rb-user { font-weight: 700; font-size: 14px; } .rb-service { font-size: 12px; color: var(--gray); margin-top: 2px; } .rb-time { font-size: 12px; color: var(--teal); font-weight: 700; } .rb-amount { font-weight: 900; font-size: 15px; color: var(--dark); } /* ===== SERVICE MODAL ===== */ .form-group { margin-bottom: 14px; } .form-label { font-size: 13px; font-weight: 700; color: var(--gray); margin-bottom: 6px; display: block; } .form-input { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 14px; font-family: 'Cairo', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; } .form-input:focus { border-color: var(--teal); } /* ===== REGISTER OWNER MODAL ===== */ .register-info { text-align: center; padding: 10px 0 20px; } .register-info .icon { font-size: 48px; margin-bottom: 12px; } .register-info h3 { font-size: 20px; font-weight: 900; margin-bottom: 8px; } .register-info p { font-size:     cursor: pointer;
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZAYN PI | منصة الحجز الذكي</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<style>
+  :root {
+    --teal: #0ABFA3;
+    --teal-dark: #089A85;
+    --teal-light: #E6FAF8;
+    --gold: #F5C842;
+    --dark: #0F1923;
+    --gray: #6B7280;
+    --bg: #F4F7F6;
+    --card-bg: #FFFFFF;
+    --border: #E5E9E8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    min-height: 100vh;
+    padding-bottom: 90px;
+  }
+
+  /* ===== PAGES ===== */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    background: var(--dark);
+    padding: 20px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .logo {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--teal);
+    letter-spacing: -1px;
+  }
+
+  .logo span { color: #fff; }
+
+  .pi-btn {
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 50px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pi-btn:hover { background: var(--teal-dark); transform: scale(1.03); }
+
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10,191,163,0.15);
+    border: 1px solid rgba(10,191,163,0.3);
+    padding: 6px 14px;
+    border-radius: 50px;
+    color: var(--teal);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* ===== GENDER TABS ===== */
+  .gender-tabs {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .gender-tab {
+    flex: 1;
+    padding: 10px;
+    border-radius: 14px;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.5);
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
     transition: all 0.25s;
     display: flex;
     align-items: center;
