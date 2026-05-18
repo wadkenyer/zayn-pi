@@ -408,6 +408,7 @@
   }
   .status-confirmed { background: #E6FAF8; color: var(--teal-dark); }
   .status-pending { background: #FFF7E0; color: #B8860B; }
+  .status-cancelled { background: #FEE2E2; color: #B91C1C; }
 
   /* ===== PROFILE PAGE ===== */
   .profile-header {
@@ -928,6 +929,58 @@
       </div>
     </div>
 
+    <!-- تعديل بيانات الصالون -->
+    <div class="section-title">تعديل بيانات الصالون</div>
+    <div style="padding: 0 20px; margin-bottom: 20px;">
+      <div class="form-group">
+        <label class="form-label">اسم الصالون</label>
+        <input type="text" class="form-input" id="edit-salon-name" placeholder="اسم الصالون">
+      </div>
+      <div class="form-group">
+        <label class="form-label">المدينة</label>
+        <input type="text" class="form-input" id="edit-salon-city" placeholder="المدينة">
+      </div>
+      <div class="form-group">
+        <label class="form-label">رقم واتساب</label>
+        <input type="tel" class="form-input" id="edit-salon-phone" placeholder="+218910000000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">صورة الصالون</label>
+        <input type="url" class="form-input" id="edit-salon-img" placeholder="https://... رابط صورة مباشر">
+      </div>
+      <div class="form-group">
+        <label class="form-label">أوقات العمل</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <div style="font-size:11px;color:var(--gray);margin-bottom:4px;">من الساعة</div>
+            <select class="form-input" id="edit-open-time">
+              <option value="8:00">8:00 ص</option>
+              <option value="9:00">9:00 ص</option>
+              <option value="10:00">10:00 ص</option>
+              <option value="11:00">11:00 ص</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--gray);margin-bottom:4px;">حتى الساعة</div>
+            <select class="form-input" id="edit-close-time">
+              <option value="20:00">8:00 م</option>
+              <option value="21:00">9:00 م</option>
+              <option value="22:00">10:00 م</option>
+              <option value="23:00">11:00 م</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">وصف مختصر</label>
+        <textarea class="form-input" id="edit-salon-desc" rows="2" style="resize:none;" placeholder="وصف الصالون..."></textarea>
+      </div>
+      <button onclick="updateSalonData()"
+        style="width:100%;padding:14px;background:var(--teal);color:#fff;border:none;border-radius:16px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15px;cursor:pointer;">
+        💾 حفظ التعديلات
+      </button>
+    </div>
+
     <!-- Services Management -->
     <div class="section-title">خدماتي وأسعاري</div>
     <div id="owner-services-list" style="padding: 0 20px;"></div>
@@ -997,36 +1050,85 @@
       <p>انضم لمنصة الحجز الأولى على شبكة Pi وابدأ في استقبال حجوزات رقمية موثقة</p>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">اسم الصالون</label>
-      <input type="text" class="form-input" id="reg-salon-name" placeholder="مثال: صالون الأناقة">
+    <!-- Step indicator -->
+    <div style="display:flex;gap:6px;margin-bottom:20px;justify-content:center;">
+      <div id="step-dot-1" style="width:28px;height:6px;border-radius:4px;background:var(--teal);"></div>
+      <div id="step-dot-2" style="width:28px;height:6px;border-radius:4px;background:#e0e0e0;"></div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">المدينة</label>
-      <input type="text" class="form-input" id="reg-salon-city" placeholder="مثال: طرابلس، الخرطوم، القاهرة">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">نوع الصالون</label>
-      <select class="form-input" id="reg-salon-gender">
-        <option value="men">💈 رجال</option>
-        <option value="women">💅 سيدات</option>
-        <option value="both">💈💅 رجال وسيدات</option>
-      </select>
-    </div>
-
-    <div class="register-fee">
-      <div>
-        <div class="register-fee-label">رسوم التسجيل (لمرة واحدة)</div>
-        <div style="font-size:12px;color:var(--gray);">يشمل بروفايل احترافي + لوحة تحكم</div>
+    <!-- STEP 1 -->
+    <div id="reg-step-1">
+      <div class="form-group">
+        <label class="form-label">اسم الصالون *</label>
+        <input type="text" class="form-input" id="reg-salon-name" placeholder="مثال: صالون الأناقة">
       </div>
-      <div class="register-fee-amount">2 Pi</div>
+      <div class="form-group">
+        <label class="form-label">المدينة *</label>
+        <input type="text" class="form-input" id="reg-salon-city" placeholder="مثال: طرابلس، الخرطوم، القاهرة">
+      </div>
+      <div class="form-group">
+        <label class="form-label">نوع الصالون *</label>
+        <select class="form-input" id="reg-salon-gender">
+          <option value="men">💈 رجال</option>
+          <option value="women">💅 سيدات</option>
+          <option value="both">💈💅 رجال وسيدات</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">رقم واتساب للتواصل</label>
+        <input type="tel" class="form-input" id="reg-salon-phone" placeholder="+218910000000">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button onclick="closeModal('register-owner-modal')" style="flex:1;padding:14px;border:2px solid var(--border);border-radius:16px;background:transparent;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">إلغاء</button>
+        <button onclick="goToRegStep2()" class="confirm-btn" style="flex:2;margin-top:0;">التالي ←</button>
+      </div>
     </div>
 
-    <div style="display:flex;gap:10px;">
-      <button onclick="closeModal('register-owner-modal')" style="flex:1;padding:14px;border:2px solid var(--border);border-radius:16px;background:transparent;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">إلغاء</button>
-      <button onclick="registerSalon()" class="confirm-btn" style="flex:2;margin-top:0;">دفع 2 Pi والتسجيل</button>
+    <!-- STEP 2 -->
+    <div id="reg-step-2" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">صورة الصالون</label>
+        <input type="url" class="form-input" id="reg-salon-img" placeholder="https://... رابط صورة مباشر">
+        <div style="font-size:11px;color:var(--gray);margin-top:4px;">اتركه فارغاً لصورة افتراضية</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">أوقات العمل</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <div style="font-size:11px;color:var(--gray);margin-bottom:4px;">من الساعة</div>
+            <select class="form-input" id="reg-open-time">
+              <option value="8:00">8:00 ص</option>
+              <option value="9:00" selected>9:00 ص</option>
+              <option value="10:00">10:00 ص</option>
+              <option value="11:00">11:00 ص</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--gray);margin-bottom:4px;">حتى الساعة</div>
+            <select class="form-input" id="reg-close-time">
+              <option value="20:00">8:00 م</option>
+              <option value="21:00" selected>9:00 م</option>
+              <option value="22:00">10:00 م</option>
+              <option value="23:00">11:00 م</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">وصف مختصر (اختياري)</label>
+        <textarea class="form-input" id="reg-salon-desc" placeholder="متخصصون في الحلاقة الكلاسيكية..." rows="2" style="resize:none;"></textarea>
+      </div>
+      <div class="register-fee">
+        <div>
+          <div class="register-fee-label">رسوم التسجيل (لمرة واحدة)</div>
+          <div style="font-size:12px;color:var(--gray);">بروفايل احترافي + لوحة تحكم كاملة</div>
+        </div>
+        <div class="register-fee-amount">2 Pi</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="goToRegStep1()" style="flex:1;padding:14px;border:2px solid var(--border);border-radius:16px;background:transparent;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">→ رجوع</button>
+        <button onclick="registerSalon()" class="confirm-btn" style="flex:2;margin-top:0;">دفع 2 Pi والتسجيل</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1159,16 +1261,63 @@ const demoSalons = [
 
 allSalons = demoSalons;
 
-// ===== INIT =====
-renderSalons(allSalons.filter(s => s.gender === 'men'));
+// ===== INIT — تحميل الصالونات من Firebase + دمجها مع الـ demo =====
+async function loadSalons() {
+  try {
+    const snap = await getDocs(collection(db, "salons"));
+    const firebaseSalons = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        name: data.name || 'صالون',
+        city: data.city || '',
+        gender: data.gender || 'men',
+        available: data.available !== false,
+        rating: data.rating || 5.0,
+        reviews: data.reviews || 0,
+        img: data.img || (data.gender === 'women'
+          ? 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600'
+          : 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600'),
+        services: data.services || []
+      };
+    });
+
+    // دمج: الصالونات الحقيقية أولاً ثم الـ demo
+    if (firebaseSalons.length > 0) {
+      allSalons = [...firebaseSalons, ...demoSalons];
+    } else {
+      allSalons = demoSalons;
+    }
+
+    renderSalons(filterByGender(allSalons, currentGender));
+  } catch(e) {
+    console.error('خطأ في تحميل الصالونات:', e);
+    allSalons = demoSalons;
+    renderSalons(filterByGender(allSalons, currentGender));
+  }
+}
+
+loadSalons();
+
+// ===== REAL-TIME: تحديث كل 30 ثانية =====
+setInterval(() => {
+  if (document.getElementById('home-page').classList.contains('active')) {
+    loadSalons();
+  }
+}, 30000);
 
 // ===== GENDER SWITCH =====
 window.switchGender = (gender) => {
   currentGender = gender;
   document.getElementById('tab-men').className = 'gender-tab' + (gender === 'men' ? ' active-men' : '');
   document.getElementById('tab-women').className = 'gender-tab' + (gender === 'women' ? ' active-women' : '');
-  renderSalons(allSalons.filter(s => s.gender === gender));
+  renderSalons(filterByGender(allSalons, gender));
 };
+
+// ===== FILTER مع دعم "both" =====
+function filterByGender(salons, gender) {
+  return salons.filter(s => s.gender === gender || s.gender === 'both');
+}
 
 // ===== RENDER SALONS =====
 function renderSalons(salons) {
@@ -1196,6 +1345,8 @@ function renderSalons(salons) {
           <span class="rating">★ ${s.rating}</span>
           <span style="color:var(--gray)">(${s.reviews} تقييم)</span>
         </div>
+        ${s.openTime ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;"><i class="fas fa-clock" style="color:var(--teal)"></i> ${s.openTime} - ${s.closeTime}</div>` : ''}
+        ${s.desc ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;font-style:italic;">${s.desc}</div>` : ''}
         <div class="services-preview">
           ${s.services.slice(0,3).map(sv => `<span class="service-tag ${isWomen ? 'service-tag-women' : ''}">${sv.name}</span>`).join('')}
           ${s.services.length > 3 ? `<span class="service-tag" style="background:#f0f0f0;color:#888">+${s.services.length-3}</span>` : ''}
@@ -1219,9 +1370,8 @@ function renderSalons(salons) {
 
 // ===== FILTER =====
 window.filterSalons = (val) => {
-  const filtered = allSalons.filter(s =>
-    s.gender === currentGender &&
-    (s.name.includes(val) || s.city.includes(val))
+  const filtered = filterByGender(allSalons, currentGender).filter(s =>
+    s.name.includes(val) || s.city.includes(val)
   );
   renderSalons(filtered);
 };
@@ -1397,29 +1547,51 @@ async function loadBookings() {
 
     snap.forEach(docSnap => {
       const b = docSnap.data();
+      const docId = docSnap.id;
       count++;
       totalPi += b.servicePrice || 0;
       const isWomen = b.gender === 'women';
+      const isCancelled = b.status === 'cancelled';
+      const bookingTime = new Date(b.dateTime);
+      const hoursLeft = (bookingTime - new Date()) / (1000 * 60 * 60);
+      const canCancel = !isCancelled && hoursLeft > 0;
+
+      let refundHint = '';
+      if (canCancel) {
+        if (hoursLeft >= 24) refundHint = '↩️ استرداد كامل عند الإلغاء';
+        else if (hoursLeft >= 2) refundHint = '⚠️ استرداد 50% عند الإلغاء';
+        else refundHint = '❌ لا استرداد (أقل من ساعتين)';
+      }
+
       html += `
-        <div class="booking-card ${isWomen ? 'booking-card-women' : ''}">
+        <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${docId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
               <div style="font-weight:900;font-size:16px;">${b.salon}</div>
               <div style="color:var(--gray);font-size:13px;margin-top:2px;">
-                <i class="fas fa-scissors"></i> ${b.service || 'خدمة'} · ${b.city}
+                <i class="fas fa-scissors"></i> ${b.service || b.serviceName || 'خدمة'} · ${b.city || b.salonCity || '—'}
               </div>
             </div>
-            <span class="booking-status status-confirmed">مؤكد ✓</span>
+            <span class="booking-status ${isCancelled ? 'status-cancelled' : 'status-confirmed'}">
+              ${isCancelled ? 'ملغي ✗' : 'مؤكد ✓'}
+            </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
             <div style="color:var(--teal);font-weight:700;font-size:14px;">
-              <i class="fas fa-calendar"></i> ${b.dateTime}
+              <i class="fas fa-calendar"></i> ${b.dateTime || b.date || 'غير محدد'}
             </div>
             <div style="font-weight:900;font-size:16px;">${b.total || b.amount} Pi</div>
           </div>
+          ${refundHint ? `<div style="font-size:12px;color:var(--gray);margin-top:6px;">${refundHint}</div>` : ''}
           <div style="font-size:11px;color:#bbb;margin-top:6px;">
             TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
           </div>
+          ${canCancel ? `
+          <button onclick="cancelBooking('${docId}', '${b.dateTime}', ${b.total || b.amount})"
+            style="margin-top:12px;width:100%;padding:10px;border:2px solid #ef4444;border-radius:12px;
+            background:transparent;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">
+            إلغاء الحجز
+          </button>` : ''}
         </div>`;
     });
 
@@ -1455,10 +1627,37 @@ window.openOwnerSection = () => {
   }
 };
 
+// ===== STEP NAVIGATION =====
+window.goToRegStep2 = () => {
+  const name = document.getElementById('reg-salon-name').value.trim();
+  const city = document.getElementById('reg-salon-city').value.trim();
+  if (!name) return showToast('أدخل اسم الصالون');
+  if (!city) return showToast('أدخل المدينة');
+  document.getElementById('reg-step-1').style.display = 'none';
+  document.getElementById('reg-step-2').style.display = 'block';
+  document.getElementById('step-dot-1').style.background = 'var(--teal)';
+  document.getElementById('step-dot-2').style.background = 'var(--teal)';
+};
+
+window.goToRegStep1 = () => {
+  document.getElementById('reg-step-2').style.display = 'none';
+  document.getElementById('reg-step-1').style.display = 'block';
+  document.getElementById('step-dot-2').style.background = '#e0e0e0';
+};
+
 window.registerSalon = async () => {
   const name = document.getElementById('reg-salon-name').value.trim();
   const city = document.getElementById('reg-salon-city').value.trim();
   const gender = document.getElementById('reg-salon-gender').value;
+  const phone = document.getElementById('reg-salon-phone').value.trim();
+  const imgInput = document.getElementById('reg-salon-img').value.trim();
+  const desc = document.getElementById('reg-salon-desc').value.trim();
+  const openTime = document.getElementById('reg-open-time').value;
+  const closeTime = document.getElementById('reg-close-time').value;
+  const defaultImg = gender === 'women'
+    ? 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600'
+    : 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600';
+  const img = imgInput || defaultImg;
 
   if (!name || !city) return showToast('أكمل بيانات الصالون');
 
@@ -1478,7 +1677,8 @@ window.registerSalon = async () => {
 
         const salonRef = doc(db, "salons", currentUser.username);
         await setDoc(salonRef, {
-          name, city, gender,
+          name, city, gender, img, phone, desc,
+          openTime, closeTime,
           owner: currentUser.username,
           available: true,
           rating: 5.0,
@@ -1490,11 +1690,15 @@ window.registerSalon = async () => {
         });
 
         isOwner = true;
-        ownerSalonData = { name, city, gender, available: true, services: [], revenue: 0 };
+        ownerSalonData = { name, city, gender, img, phone, desc, openTime, closeTime, available: true, services: [], revenue: 0 };
         ownerServices = [];
 
         closeModal('register-owner-modal');
         showToast(`🎉 تم تسجيل ${name} بنجاح!`);
+        
+        // تحديث قائمة الصالونات فوراً
+        await loadSalons();
+        
         switchPage('owner-page', null);
         loadOwnerDashboard();
       },
@@ -1521,6 +1725,15 @@ async function loadOwnerDashboard() {
     salonAvailable = ownerSalonData.available !== false;
 
     document.getElementById('owner-salon-name-header').textContent = ownerSalonData.name;
+
+    // تعبئة حقول التعديل بالبيانات الحالية
+    document.getElementById('edit-salon-name').value = ownerSalonData.name || '';
+    document.getElementById('edit-salon-city').value = ownerSalonData.city || '';
+    document.getElementById('edit-salon-phone').value = ownerSalonData.phone || '';
+    document.getElementById('edit-salon-img').value = ownerSalonData.img || '';
+    document.getElementById('edit-salon-desc').value = ownerSalonData.desc || '';
+    if (ownerSalonData.openTime) document.getElementById('edit-open-time').value = ownerSalonData.openTime;
+    if (ownerSalonData.closeTime) document.getElementById('edit-close-time').value = ownerSalonData.closeTime;
 
     // Load bookings for this salon
     const bQuery = query(
@@ -1625,6 +1838,39 @@ window.toggleAvailability = async () => {
   }
 };
 
+window.updateSalonData = async () => {
+  const updates = {};
+
+  const name = document.getElementById('edit-salon-name').value.trim();
+  const city = document.getElementById('edit-salon-city').value.trim();
+  const phone = document.getElementById('edit-salon-phone').value.trim();
+  const img = document.getElementById('edit-salon-img').value.trim();
+  const desc = document.getElementById('edit-salon-desc').value.trim();
+  const openTime = document.getElementById('edit-open-time').value;
+  const closeTime = document.getElementById('edit-close-time').value;
+
+  if (name) updates.name = name;
+  if (city) updates.city = city;
+  if (phone) updates.phone = phone;
+  if (img) updates.img = img;
+  if (desc) updates.desc = desc;
+  if (openTime) updates.openTime = openTime;
+  if (closeTime) updates.closeTime = closeTime;
+
+  if (Object.keys(updates).length === 0) return showToast('لا يوجد تعديلات للحفظ');
+
+  try {
+    await updateDoc(doc(db, "salons", currentUser.username), updates);
+    showToast('✅ تم حفظ التعديلات');
+    loadSalons();
+    // تحديث ownerSalonData
+    ownerSalonData = { ...ownerSalonData, ...updates };
+    if (updates.name) document.getElementById('owner-salon-name-header').textContent = updates.name;
+  } catch(e) {
+    showToast('خطأ في الحفظ');
+  }
+};
+
 window.openAddServiceModal = () => {
   document.getElementById('svc-name').value = '';
   document.getElementById('svc-duration').value = '';
@@ -1660,11 +1906,92 @@ window.deleteService = async (idx) => {
   } catch(e) {}
 };
 
+// ===== CANCEL BOOKING =====
+window.cancelBooking = async (bookingId, dateTime, amount) => {
+  try {
+    // 1. استشر السيرفر عن سياسة الاسترداد
+    const res = await fetch('/api/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId,
+        user: currentUser.username,
+        bookingDateTime: dateTime,
+        amount
+      })
+    });
+
+    const data = await res.json();
+    if (!data.success) return showToast('خطأ في الإلغاء');
+
+    // 2. أظهر رسالة السياسة للمستخدم
+    const confirmed = confirm(`${data.message}\n\nهل تريد المتابعة؟`);
+    if (!confirmed) return;
+
+    // 3. حدّث الحجز في Firebase كـ cancelled
+    await updateDoc(doc(db, "bookings", bookingId), {
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      refundPolicy: data.refundPolicy,
+      refundAmount: parseFloat(data.refundAmount)
+    });
+
+    // 4. أظهر نتيجة واحدّث الواجهة
+    showToast(data.refundPolicy === 'no_refund'
+      ? '🚫 تم الإلغاء — لا استرداد'
+      : `✅ تم الإلغاء — سيتم استرداد ${data.refundAmount} Pi`
+    );
+
+    // إخفاء كارد الحجز
+    const card = document.getElementById(`booking-${bookingId}`);
+    if (card) {
+      card.style.opacity = '0.5';
+      card.querySelector('button') && (card.querySelector('button').style.display = 'none');
+      card.querySelector('.booking-status').textContent = 'ملغي ✗';
+      card.querySelector('.booking-status').className = 'booking-status status-cancelled';
+    }
+
+  } catch(e) {
+    showToast('خطأ — تحقق من الاتصال');
+    console.error(e);
+  }
+};
+
 // ===== PI AUTH =====
 window.initPi = async () => {
   try {
     await Pi.init({ version: "2.0", sandbox: true });
-    const auth = await Pi.authenticate(['username', 'payments']);
+    console.log('✅ Pi SDK initialized');
+    const auth = await Pi.authenticate(['username', 'payments'], {
+      onIncompletePaymentFound: async (payment) => {
+        // دفع معلق من جلسة سابقة — نكمله تلقائياً
+        console.log('🔄 دفع معلق وُجد:', payment.identifier);
+        try {
+          // حاول إكماله أولاً
+          const res = await fetch('/api/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentId: payment.identifier,
+              txid: payment.transaction?.txid || 'pending'
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            console.log('✅ تم إكمال الدفع المعلق');
+          } else {
+            // إذا فشل الإكمال، أرسله للـ approve أولاً
+            await fetch('/api/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier })
+            });
+          }
+        } catch(e) {
+          console.log('تعذر معالجة الدفع المعلق:', e.message);
+        }
+      }
+    });
     currentUser = auth.user;
 
     const badge = `<div class="user-badge"><i class="fas fa-circle" style="color:var(--gold);font-size:8px"></i> ${currentUser.username}</div>`;
