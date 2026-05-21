@@ -1455,6 +1455,26 @@ window.confirmBooking = async () => {
   const date = document.getElementById('booking-date').value;
   if (!date) return showToast('اختر التاريخ');
 
+  // ===== فحص توفر الوقت قبل الدفع =====
+  try {
+    showToast('⏳ جاري التحقق من توفر الوقت...');
+    const slotCheck = await fetch('/api/check-slot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        salonId: selectedSalon.id,
+        date: date,
+        time: selectedTime
+      })
+    });
+    const slotData = await slotCheck.json();
+    if (!slotData.available) {
+      return showToast('❌ هذا الوقت محجوز — اختر وقتاً آخر');
+    }
+  } catch(e) {
+    console.log('slot check skipped:', e.message);
+  }
+
   const total = +(selectedService.price + 0.1).toFixed(1);
   const fullDateTime = `${date} ${selectedTime}`;
 
@@ -1490,24 +1510,91 @@ window.confirmBooking = async () => {
           });
         } catch(e) { console.log('complete endpoint not set'); }
 
-        await addDoc(collection(db, "bookings"), {
+        // حساب العربون
+        const deposit = +(0.2 + 0.1).toFixed(1); // 0.2 جدية + 0.1 عمولة
+        
+        // توليد كود QR Check-In
+        const checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const bookingRef = await addDoc(collection(db, "bookings"), {
+          // أطراف الحجز
+          userId: currentUser.username,
           user: currentUser.username,
-          salon: selectedSalon.name,
           salonId: selectedSalon.id,
+          salonName: selectedSalon.name,
+          salon: selectedSalon.name,
+          salonCity: selectedSalon.city,
           city: selectedSalon.city,
+          
+          // تفاصيل الخدمة
+          serviceName: selectedService.name,
           service: selectedService.name,
+          serviceDuration: selectedService.duration || 30,
           servicePrice: selectedService.price,
+          gender: selectedSalon.gender,
+          
+          // موعد
+          date: date,
+          time: selectedTime,
+          dateTime: fullDateTime,
+          
+          // حالة الحجز — المسار الجديد
+          status: "pending", // ينتظر قبول صاحب الصالون
+          
+          // مالية
+          depositAmount: 0.2,
           commission: 0.1,
+          depositPaid: deposit,
           total: total,
           txid: txid,
-          dateTime: fullDateTime,
-          gender: selectedSalon.gender,
-          status: "confirmed",
+          paymentStatus: "deposit_paid",
+          
+          // QR
+          checkInCode: checkInCode,
+          isReviewed: false,
+          
           createdAt: serverTimestamp()
         });
 
+        // ===== إرسال إشعار WhatsApp لصاحب الصالون =====
+        if (selectedSalon.phone || selectedSalon.ownerPhone) {
+          try {
+            await fetch('/api/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ownerPhone: selectedSalon.phone || selectedSalon.ownerPhone,
+                salonName: selectedSalon.name,
+                customerName: currentUser.username,
+                serviceName: selectedService.name,
+                dateTime: fullDateTime,
+                depositAmount: deposit,
+                bookingId: bookingRef.id,
+                type: 'new_booking'
+              })
+            });
+          } catch(e) {
+            console.log('WhatsApp notify failed:', e.message);
+          }
+        }
+
+        // ===== حفظ الإشعار في Firebase أيضاً =====
+        try {
+          await addDoc(collection(db, "notifications"), {
+            to: selectedSalon.id,
+            type: 'new_booking',
+            title: 'حجز جديد',
+            body: `@${currentUser.username} حجز ${selectedService.name} في ${fullDateTime}`,
+            bookingId: bookingRef.id,
+            salonId: selectedSalon.id,
+            isRead: false,
+            whatsappSent: !!(selectedSalon.phone),
+            createdAt: serverTimestamp()
+          });
+        } catch(e) {}
+
         closeModal('booking-modal');
-        showToast(`✅ تم الحجز في ${selectedSalon.name}`);
+        showToast(`✅ تم الحجز — ينتظر قبول الصالون`);
         switchPage('bookings-page', 'nav-bookings');
         loadBookings();
       },
@@ -1735,7 +1822,52 @@ async function loadOwnerDashboard() {
     if (ownerSalonData.openTime) document.getElementById('edit-open-time').value = ownerSalonData.openTime;
     if (ownerSalonData.closeTime) document.getElementById('edit-close-time').value = ownerSalonData.closeTime;
 
-    // Load bookings for this salon
+    // ===== حجوزات معلقة تنتظر القبول =====
+    const pendingQ = query(
+      collection(db, "bookings"),
+      where("salonId", "==", currentUser.username),
+      where("status", "==", "pending"),
+      orderBy("createdAt", "desc")
+    );
+    const pendingSnap = await getDocs(pendingQ);
+    let pendingCount = 0;
+    let pendingHtml = '';
+
+    pendingSnap.forEach(d => {
+      const b = d.data();
+      pendingCount++;
+      pendingHtml += `
+        <div class="pending-booking-item" id="pending-${d.id}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-weight:900;font-size:15px;">@${b.userId || b.user}</div>
+              <div style="font-size:13px;color:var(--gray);margin-top:2px;">
+                ✂️ ${b.serviceName || b.service || 'خدمة'} · ${b.dateTime || ''}
+              </div>
+              <div style="font-size:12px;color:var(--teal);margin-top:2px;">
+                💰 عربون: ${b.depositPaid || 0.3} Pi
+              </div>
+            </div>
+            <span class="status-badge status-pending">⏳ انتظار</span>
+          </div>
+          <div class="pending-actions">
+            <button class="accept-btn" onclick="acceptBooking('${d.id}', '${b.userId || b.user}', '${b.serviceName || b.service || ''}', '${b.dateTime || ''}', '')">
+              ✅ قبول
+            </button>
+            <button class="reject-btn" onclick="rejectBooking('${d.id}')">
+              ❌ رفض
+            </button>
+          </div>
+        </div>`;
+    });
+
+    const pendingListEl = document.getElementById('owner-pending-list');
+    if (pendingListEl) {
+      pendingListEl.innerHTML = pendingHtml ||
+        `<div style="text-align:center;color:var(--gray);padding:16px 0;font-size:13px;">✓ لا توجد حجوزات معلقة</div>`;
+    }
+
+    // ===== كل الحجوزات =====
     const bQuery = query(
       collection(db, "bookings"),
       where("salonId", "==", currentUser.username),
@@ -1746,31 +1878,42 @@ async function loadOwnerDashboard() {
 
     let revenue = 0;
     let todayCount = 0;
-    let pendingCount = 0;
     const today = new Date().toISOString().split('T')[0];
     let recentHtml = '';
+    let completedCount = 0;
 
     bSnap.forEach(d => {
       const b = d.data();
-      revenue += b.servicePrice || 0;
+      if (b.status === 'completed') {
+        revenue += b.servicePrice || 0;
+        completedCount++;
+      }
       if (b.dateTime && b.dateTime.startsWith(today)) todayCount++;
-      if (b.status === 'pending') pendingCount++;
       recentHtml += `
         <div class="recent-booking-item">
           <div>
-            <div class="rb-user">@${b.user}</div>
-            <div class="rb-service">${b.service || 'خدمة'}</div>
-            <div class="rb-time">${b.dateTime}</div>
+            <div class="rb-user">@${b.userId || b.user}</div>
+            <div class="rb-service">${b.serviceName || b.service || 'خدمة'}</div>
+            <div class="rb-time">${b.dateTime || ''}</div>
           </div>
-          <div class="rb-amount">${b.servicePrice || 0} Pi</div>
+          <div style="text-align:left;">
+            <div class="rb-amount">${b.servicePrice || 0} Pi</div>
+            <span class="status-badge status-${b.status || 'pending'}" style="font-size:10px;">${
+              b.status === 'completed' ? '✓ مكتمل' :
+              b.status === 'accepted' ? '✓ مقبول' :
+              b.status === 'cancelled' ? '✗ ملغي' :
+              b.status === 'checkedin' ? '📍 حضر' :
+              '⏳ انتظار'
+            }</span>
+          </div>
         </div>`;
     });
 
     document.getElementById('owner-revenue').textContent = revenue.toFixed(1);
-    document.getElementById('owner-revenue-sub').textContent = `↑ ${bSnap.size} حجوزات مكتملة`;
+    document.getElementById('owner-revenue-sub').textContent = `↑ ${completedCount} حجوزات مكتملة`;
     document.getElementById('owner-today').textContent = todayCount;
     document.getElementById('owner-pending').textContent = pendingCount;
-    document.getElementById('owner-commission').innerHTML = `${(bSnap.size * 0.1).toFixed(1)} <span class="mini-stat-unit">Pi</span>`;
+    document.getElementById('owner-commission').innerHTML = `${(completedCount * 0.1).toFixed(1)} <span style="font-size:12px;color:var(--teal);">Pi</span>`;
 
     // Availability
     const toggle = document.getElementById('avail-toggle');
@@ -1787,8 +1930,11 @@ async function loadOwnerDashboard() {
     renderOwnerServices();
 
     // Recent bookings
-    document.getElementById('owner-recent-bookings').innerHTML =
-      recentHtml || `<div class="empty-state" style="padding:20px 0;"><i class="fas fa-inbox"></i><p>لا حجوزات بعد</p></div>`;
+    const recentEl = document.getElementById('owner-recent-bookings') || document.getElementById('owner-recent-list');
+    if (recentEl) {
+      recentEl.innerHTML = recentHtml ||
+        `<div class="empty-state" style="padding:20px 0;"><i class="fas fa-inbox"></i><p>لا حجوزات بعد</p></div>`;
+    }
 
   } catch(e) {
     console.error(e);
@@ -1816,6 +1962,91 @@ function renderOwnerServices() {
     </div>
   `).join('');
 }
+
+// ===== قبول الحجز =====
+window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhone) => {
+  try {
+    await updateDoc(doc(db, "bookings", bookingId), {
+      status: 'accepted',
+      acceptedAt: serverTimestamp()
+    });
+
+    // إشعار الزبون بالقبول (إذا كان لديه رقم)
+    if (userPhone) {
+      try {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ownerPhone: userPhone,
+            salonName: ownerData?.name || 'الصالون',
+            customerName: userId,
+            serviceName,
+            dateTime,
+            type: 'accepted'
+          })
+        });
+      } catch(e) {}
+    }
+
+    showToast('✅ تم قبول الحجز');
+    loadOwnerDashboard();
+  } catch(e) {
+    showToast('خطأ في القبول');
+  }
+};
+
+// ===== رفض الحجز =====
+window.rejectBooking = async (bookingId) => {
+  const reason = prompt('سبب الرفض (اختياري):') || 'ظرف طارئ';
+  try {
+    await updateDoc(doc(db, "bookings", bookingId), {
+      status: 'rejected',
+      cancelReason: reason,
+      cancelledBy: 'owner',
+      cancelledAt: serverTimestamp()
+    });
+    showToast('تم رفض الحجز');
+    loadOwnerDashboard();
+  } catch(e) {
+    showToast('خطأ');
+  }
+};
+
+// ===== QR Check-In تحقق =====
+window.verifyCheckIn = async () => {
+  const code = document.getElementById('qr-input-field').value.trim();
+  if (code.length !== 6) return showToast('الكود يجب أن يكون 6 أرقام');
+
+  try {
+    // ابحث عن الحجز بالكود
+    const q = query(
+      collection(db, "bookings"),
+      where("salonId", "==", currentUser.username),
+      where("checkInCode", "==", code),
+      where("status", "==", "accepted")
+    );
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      return showToast('❌ كود غير صحيح أو الحجز غير مقبول');
+    }
+
+    const bookingDoc = snap.docs[0];
+    await updateDoc(doc(db, "bookings", bookingDoc.id), {
+      status: 'checkedin',
+      checkedInAt: serverTimestamp()
+    });
+
+    const b = bookingDoc.data();
+    document.getElementById('qr-input-field').value = '';
+    showToast(`✅ تم تسجيل حضور @${b.userId} — ${b.serviceName}`);
+    loadOwnerDashboard();
+  } catch(e) {
+    showToast('خطأ في التحقق');
+    console.error(e);
+  }
+};
 
 window.toggleAvailability = async () => {
   salonAvailable = !salonAvailable;
