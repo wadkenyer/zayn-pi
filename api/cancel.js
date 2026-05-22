@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   }
 
   const { bookingId, user, bookingDateTime, amount } = req.body;
+  const parsedAmount = parseFloat(amount) || 0;
 
   // التحقق من البيانات المطلوبة
   if (!bookingId || !user || !bookingDateTime) {
@@ -36,12 +37,12 @@ export default async function handler(req, res) {
     if (hoursUntilBooking >= 24) {
       // إلغاء قبل 24 ساعة أو أكثر → استرداد كامل
       refundPercentage = 100;
-      refundAmount = amount;
+      refundAmount = parsedAmount;
       refundPolicy = 'full_refund';
     } else if (hoursUntilBooking >= 2) {
       // إلغاء بين 2 و 24 ساعة → استرداد 50%
       refundPercentage = 50;
-      refundAmount = amount * 0.5;
+      refundAmount = parsedAmount * 0.5;
       refundPolicy = 'partial_refund';
     } else {
       // إلغاء أقل من ساعتين → لا استرداد
