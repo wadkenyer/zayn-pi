@@ -1703,16 +1703,27 @@ async function loadBookings() {
     let count = 0;
     let html = '';
 
-    snap.forEach(docSnap => {
+    for (const docSnap of snap.docs) {
       const b = docSnap.data();
       const docId = docSnap.id;
       count++;
       totalPi += b.servicePrice || 0;
       const isWomen = b.gender === 'women';
       const isCancelled = b.status === 'cancelled';
+      const isRejected = b.status === 'rejected';
       const bookingTime = new Date(b.dateTime);
       const hoursLeft = (bookingTime - new Date()) / (1000 * 60 * 60);
-      const canCancel = !isCancelled && hoursLeft > 0;
+      const canCancel = !isCancelled && !isRejected && hoursLeft > 0;
+      const showCode = !isCancelled && !isRejected && b.status !== 'checkedin';
+
+      // إذا لم يكن للحجز كود — أنشئ واحداً واحفظه تلقائياً
+      let checkInCode = b.checkInCode;
+      if (!checkInCode && showCode) {
+        checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
+        try {
+          await updateDoc(doc(db, "bookings", docId), { checkInCode });
+        } catch(e) {}
+      }
 
       let refundHint = '';
       if (canCancel) {
@@ -1722,21 +1733,21 @@ async function loadBookings() {
       }
 
       const statusLabel = b.status === 'accepted' ? 'مقبول ✓' :
-                          b.status === 'cancelled' || isCancelled ? 'ملغي ✗' :
+                          isCancelled ? 'ملغي ✗' :
                           b.status === 'checkedin' ? 'حضر 📍' :
                           b.status === 'completed' ? 'مكتمل ✓' :
-                          b.status === 'rejected' ? 'مرفوض ✗' :
+                          isRejected ? 'مرفوض ✗' :
                           'قيد الانتظار ⏳';
-      const statusClass = (b.status === 'cancelled' || isCancelled) ? 'status-cancelled' :
+      const statusClass = (isCancelled || isRejected) ? 'status-cancelled' :
                           b.status === 'accepted' || b.status === 'completed' ? 'status-confirmed' :
-                          b.status === 'rejected' ? 'status-cancelled' :
+                          b.status === 'checkedin' ? 'status-confirmed' :
                           'status-pending';
 
       html += `
         <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${docId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <div style="font-weight:900;font-size:16px;">${b.salon}</div>
+              <div style="font-weight:900;font-size:16px;">${b.salon || b.salonName || '—'}</div>
               <div style="color:var(--gray);font-size:13px;margin-top:2px;">
                 <i class="fas fa-scissors"></i> ${b.service || b.serviceName || 'خدمة'} · ${b.city || b.salonCity || '—'}
               </div>
@@ -1747,25 +1758,24 @@ async function loadBookings() {
             <div style="color:var(--teal);font-weight:700;font-size:14px;">
               <i class="fas fa-calendar"></i> ${b.dateTime || b.date || 'غير محدد'}
             </div>
-            <div style="font-weight:900;font-size:16px;">${b.total || b.amount} Pi</div>
+            <div style="font-weight:900;font-size:16px;">${b.total || b.amount || 0} Pi</div>
           </div>
           ${refundHint ? `<div style="font-size:12px;color:var(--gray);margin-top:6px;">${refundHint}</div>` : ''}
-          ${b.checkInCode && !isCancelled && b.status !== 'rejected' ? `
-          <div style="margin-top:12px;background:linear-gradient(135deg,var(--dark),#1a2f42);border-radius:14px;padding:14px;text-align:center;">
-            <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:6px;">🔑 كود الدخول — أعطه لصاحب الصالون</div>
-            <div style="font-size:32px;font-weight:900;color:var(--teal);letter-spacing:8px;">${b.checkInCode}</div>
+          ${showCode && checkInCode ? `
+          <div style="margin-top:12px;background:linear-gradient(135deg,var(--dark),#1a2f42);border-radius:14px;padding:16px;text-align:center;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-bottom:8px;">🔑 كود الحضور — أعطه لصاحب الصالون عند وصولك</div>
+            <div style="font-size:36px;font-weight:900;color:var(--teal);letter-spacing:10px;line-height:1;">${checkInCode}</div>
           </div>` : ''}
           <div style="font-size:11px;color:#bbb;margin-top:8px;">
             TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
           </div>
-          ${canCancel && b.status !== 'rejected' ? `
+          ${canCancel ? `
           <button onclick="cancelBooking('${docId}', '${b.dateTime}', ${b.total || b.amount})"
             style="margin-top:12px;width:100%;padding:10px;border:2px solid #ef4444;border-radius:12px;
             background:transparent;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">
             إلغاء الحجز
           </button>` : ''}
         </div>`;
-    });
 
     list.innerHTML = html;
 
