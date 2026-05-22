@@ -1424,10 +1424,10 @@ function renderSalons(salons) {
         </div>
         <div class="salon-footer">
           <div class="price-range">
-            من <strong>${Math.min(...s.services.map(sv=>sv.price))} Pi</strong>
+            من <strong>${s.services.length ? Math.min(...s.services.map(sv=>sv.price)) : '—'} Pi</strong>
           </div>
           <button
-            onclick='openBookingModal(${JSON.stringify(s)})'
+            onclick='openBookingModal(${JSON.stringify(s).replace(/'/g, "&#39;")})'
             class="book-btn ${isWomen ? 'book-btn-women' : ''}"
             ${!s.available ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}
           >
@@ -1453,6 +1453,15 @@ window.openBookingModal = (salon) => {
     showToast('سجّل دخولك أولاً بـ Pi');
     return;
   }
+  if (!salon.available) {
+    showToast('🔴 الصالون مشغول الآن');
+    return;
+  }
+  if (!salon.services || salon.services.length === 0) {
+    showToast('لا توجد خدمات متاحة في هذا الصالون');
+    return;
+  }
+
   selectedSalon = salon;
   selectedService = null;
   selectedTime = null;
@@ -1461,10 +1470,14 @@ window.openBookingModal = (salon) => {
   document.getElementById('modal-salon-name').textContent = `حجز في ${salon.name}`;
   document.getElementById('booking-summary').style.display = 'none';
 
-  // Services
+  // إعادة تعيين زر التأكيد
+  const confirmBtn = document.getElementById('confirm-btn-main');
+  if (confirmBtn) confirmBtn.disabled = false;
+
+  // Services — استخدام data-index لتجنب مشاكل الأحرف الخاصة في أسماء الخدمات
   const svcsEl = document.getElementById('modal-services');
   svcsEl.innerHTML = salon.services.map((sv, i) => `
-    <div class="service-option" id="svc-opt-${i}" onclick="selectService(${i}, ${sv.price}, '${sv.name}', '${isWomen}')">
+    <div class="service-option" id="svc-opt-${i}" onclick="selectService(${i})">
       <div>
         <div class="service-name">${sv.name}</div>
         <div class="service-duration"><i class="fas fa-clock"></i> ${sv.duration} دقيقة</div>
@@ -1473,32 +1486,48 @@ window.openBookingModal = (salon) => {
     </div>
   `).join('');
 
-  // Date
+  // Date — غداً كأدنى تاريخ
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById('booking-date').value = tomorrow.toISOString().split('T')[0];
+  const dateInput = document.getElementById('booking-date');
+  dateInput.value = tomorrow.toISOString().split('T')[0];
+  dateInput.min = tomorrow.toISOString().split('T')[0];
 
-  // Time slots
-  generateTimeSlots(isWomen);
+  // Time slots بناءً على أوقات عمل الصالون
+  generateTimeSlots(isWomen, salon.openTime, salon.closeTime);
 
   openModal('booking-modal');
 };
 
-window.selectService = (idx, price, name, isWomen) => {
-  selectedService = { idx, price, name };
+window.selectService = (idx) => {
+  if (!selectedSalon) return;
+  const sv = selectedSalon.services[idx];
+  if (!sv) return;
+  selectedService = { idx, price: sv.price, name: sv.name, duration: sv.duration };
+
+  const isWomen = selectedSalon.gender === 'women';
   document.querySelectorAll('.service-option').forEach(el => {
     el.classList.remove('selected', 'selected-women');
   });
-  const cls = isWomen === 'true' ? 'selected-women' : 'selected';
-  document.getElementById(`svc-opt-${idx}`).classList.add(cls);
+  document.getElementById(`svc-opt-${idx}`).classList.add(isWomen ? 'selected-women' : 'selected');
 
   if (selectedTime) updateSummary();
 };
 
-function generateTimeSlots(isWomen) {
+function generateTimeSlots(isWomen, openTime, closeTime) {
   const container = document.getElementById('time-slots');
   container.innerHTML = '';
-  for (let h = 9; h <= 21; h++) {
+
+  // تحديد ساعات العمل من بيانات الصالون أو القيم الافتراضية
+  const parseHour = (t) => {
+    if (!t) return null;
+    const parts = t.split(':');
+    return parseInt(parts[0]);
+  };
+  const startH = parseHour(openTime) || 9;
+  const endH   = parseHour(closeTime) || 21;
+
+  for (let h = startH; h <= endH; h++) {
     const timeStr = `${h}:00`;
     const btn = document.createElement('button');
     btn.className = 'time-btn';
@@ -1525,6 +1554,10 @@ window.confirmBooking = async () => {
   if (!selectedTime) return showToast('اختر وقت الحجز');
   const date = document.getElementById('booking-date').value;
   if (!date) return showToast('اختر التاريخ');
+
+  // منع الضغط المزدوج
+  const confirmBtn = document.getElementById('confirm-btn-main');
+  if (confirmBtn) confirmBtn.disabled = true;
 
   // ===== فحص توفر الوقت قبل الدفع =====
   try {
@@ -1581,9 +1614,6 @@ window.confirmBooking = async () => {
           });
         } catch(e) { console.log('complete endpoint not set'); }
 
-        // حساب العربون
-        const deposit = +(0.2 + 0.1).toFixed(1); // 0.2 جدية + 0.1 عمولة
-        
         // توليد كود QR Check-In
         const checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -1596,45 +1626,46 @@ window.confirmBooking = async () => {
           salon: selectedSalon.name,
           salonCity: selectedSalon.city,
           city: selectedSalon.city,
-          
+          salonPhone: selectedSalon.phone || selectedSalon.ownerPhone || '',
+
           // تفاصيل الخدمة
           serviceName: selectedService.name,
           service: selectedService.name,
           serviceDuration: selectedService.duration || 30,
           servicePrice: selectedService.price,
           gender: selectedSalon.gender,
-          
+
           // موعد
           date: date,
           time: selectedTime,
           dateTime: fullDateTime,
-          
-          // حالة الحجز — المسار الجديد
-          status: "pending", // ينتظر قبول صاحب الصالون
-          
-          // مالية
-          depositAmount: 0.2,
+
+          // حالة الحجز
+          status: "pending",
+
+          // مالية — total هو المبلغ المدفوع فعلياً
+          servicePrice: selectedService.price,
           commission: 0.1,
-          depositPaid: deposit,
           total: total,
+          depositPaid: total,
           txid: txid,
-          paymentStatus: "deposit_paid",
-          
+          paymentStatus: "paid",
+
           // QR
           checkInCode: checkInCode,
           isReviewed: false,
-          
+
           createdAt: serverTimestamp()
         });
 
         // ===== إرسال إشعار WhatsApp لصاحب الصالون =====
-        if (selectedSalon.phone || selectedSalon.ownerPhone) {
+        if (selectedSalon.phone || selectedSalon.ownerPhone || selectedSalon.salonPhone) {
           try {
             await fetch('/api/notify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                ownerPhone: selectedSalon.phone || selectedSalon.ownerPhone,
+                ownerPhone: selectedSalon.phone || selectedSalon.ownerPhone || selectedSalon.salonPhone,
                 salonName: selectedSalon.name,
                 customerName: currentUser.username,
                 serviceName: selectedService.name,
@@ -1669,11 +1700,18 @@ window.confirmBooking = async () => {
         switchPage('bookings-page', 'nav-bookings');
         loadBookings();
       },
-      onCancel: () => showToast('تم إلغاء الدفع'),
-      onError: (err) => showToast('خطأ في الدفع، حاول مرة أخرى')
+      onCancel: () => {
+        showToast('تم إلغاء الدفع');
+        if (confirmBtn) confirmBtn.disabled = false;
+      },
+      onError: (err) => {
+        showToast('خطأ في الدفع، حاول مرة أخرى');
+        if (confirmBtn) confirmBtn.disabled = false;
+      }
     });
   } catch (e) {
     showToast('حدث خطأ، تأكد من Pi Browser');
+    if (confirmBtn) confirmBtn.disabled = false;
   }
 };
 
@@ -2111,7 +2149,7 @@ window.rejectBooking = async (bookingId) => {
 // ===== QR Check-In تحقق =====
 window.verifyCheckIn = async () => {
   const code = document.getElementById('qr-input-field').value.trim();
-  if (code.length !== 6) return showToast('الكود يجب أن يكون 6 أرقام');
+  if (!/^\d{6}$/.test(code)) return showToast('الكود يجب أن يكون 6 أرقام فقط');
 
   try {
     // ابحث عن الحجز بالكود بغض النظر عن الحالة
