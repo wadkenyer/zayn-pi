@@ -1703,16 +1703,27 @@ async function loadBookings() {
     let count = 0;
     let html = '';
 
-    snap.forEach(docSnap => {
+    for (const docSnap of snap.docs) {
       const b = docSnap.data();
       const docId = docSnap.id;
       count++;
       totalPi += b.servicePrice || 0;
       const isWomen = b.gender === 'women';
       const isCancelled = b.status === 'cancelled';
+      const isRejected = b.status === 'rejected';
       const bookingTime = new Date(b.dateTime);
       const hoursLeft = (bookingTime - new Date()) / (1000 * 60 * 60);
-      const canCancel = !isCancelled && hoursLeft > 0;
+      const canCancel = !isCancelled && !isRejected && hoursLeft > 0;
+      const showCode = !isCancelled && !isRejected && b.status !== 'checkedin';
+
+      // إذا لم يكن للحجز كود — أنشئ واحداً واحفظه تلقائياً
+      let checkInCode = b.checkInCode;
+      if (!checkInCode && showCode) {
+        checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
+        try {
+          await updateDoc(doc(db, "bookings", docId), { checkInCode });
+        } catch(e) {}
+      }
 
       let refundHint = '';
       if (canCancel) {
@@ -1721,27 +1732,41 @@ async function loadBookings() {
         else refundHint = '❌ لا استرداد (أقل من ساعتين)';
       }
 
+      const statusLabel = b.status === 'accepted' ? 'مقبول ✓' :
+                          isCancelled ? 'ملغي ✗' :
+                          b.status === 'checkedin' ? 'حضر 📍' :
+                          b.status === 'completed' ? 'مكتمل ✓' :
+                          isRejected ? 'مرفوض ✗' :
+                          'قيد الانتظار ⏳';
+      const statusClass = (isCancelled || isRejected) ? 'status-cancelled' :
+                          b.status === 'accepted' || b.status === 'completed' ? 'status-confirmed' :
+                          b.status === 'checkedin' ? 'status-confirmed' :
+                          'status-pending';
+
       html += `
         <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${docId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <div style="font-weight:900;font-size:16px;">${b.salon}</div>
+              <div style="font-weight:900;font-size:16px;">${b.salon || b.salonName || '—'}</div>
               <div style="color:var(--gray);font-size:13px;margin-top:2px;">
                 <i class="fas fa-scissors"></i> ${b.service || b.serviceName || 'خدمة'} · ${b.city || b.salonCity || '—'}
               </div>
             </div>
-            <span class="booking-status ${isCancelled ? 'status-cancelled' : 'status-confirmed'}">
-              ${isCancelled ? 'ملغي ✗' : 'مؤكد ✓'}
-            </span>
+            <span class="booking-status ${statusClass}">${statusLabel}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
             <div style="color:var(--teal);font-weight:700;font-size:14px;">
               <i class="fas fa-calendar"></i> ${b.dateTime || b.date || 'غير محدد'}
             </div>
-            <div style="font-weight:900;font-size:16px;">${b.total || b.amount} Pi</div>
+            <div style="font-weight:900;font-size:16px;">${b.total || b.amount || 0} Pi</div>
           </div>
           ${refundHint ? `<div style="font-size:12px;color:var(--gray);margin-top:6px;">${refundHint}</div>` : ''}
-          <div style="font-size:11px;color:#bbb;margin-top:6px;">
+          ${showCode && checkInCode ? `
+          <div style="margin-top:12px;background:linear-gradient(135deg,var(--dark),#1a2f42);border-radius:14px;padding:16px;text-align:center;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-bottom:8px;">🔑 كود الحضور — أعطه لصاحب الصالون عند وصولك</div>
+            <div style="font-size:36px;font-weight:900;color:var(--teal);letter-spacing:10px;line-height:1;">${checkInCode}</div>
+          </div>` : ''}
+          <div style="font-size:11px;color:#bbb;margin-top:8px;">
             TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
           </div>
           ${canCancel ? `
@@ -1751,7 +1776,6 @@ async function loadBookings() {
             إلغاء الحجز
           </button>` : ''}
         </div>`;
-    });
 
     list.innerHTML = html;
 
@@ -2090,28 +2114,38 @@ window.verifyCheckIn = async () => {
   if (code.length !== 6) return showToast('الكود يجب أن يكون 6 أرقام');
 
   try {
-    // ابحث عن الحجز بالكود
+    // ابحث عن الحجز بالكود بغض النظر عن الحالة
     const q = query(
       collection(db, "bookings"),
       where("salonId", "==", currentUser.username),
-      where("checkInCode", "==", code),
-      where("status", "==", "accepted")
+      where("checkInCode", "==", code)
     );
     const snap = await getDocs(q);
 
     if (snap.empty) {
-      return showToast('❌ كود غير صحيح أو الحجز غير مقبول');
+      return showToast('❌ كود غير صحيح');
     }
 
     const bookingDoc = snap.docs[0];
+    const b = bookingDoc.data();
+
+    // التحقق من حالة الحجز
+    if (b.status === 'cancelled' || b.status === 'rejected') {
+      return showToast('❌ هذا الحجز ملغي أو مرفوض');
+    }
+    if (b.status === 'checkedin') {
+      return showToast(`⚠️ تم تسجيل حضور @${b.userId || b.user} مسبقاً`);
+    }
+
+    // تسجيل الحضور + قبول تلقائي إن لم يُقبل بعد
     await updateDoc(doc(db, "bookings", bookingDoc.id), {
       status: 'checkedin',
+      acceptedAt: b.acceptedAt || serverTimestamp(),
       checkedInAt: serverTimestamp()
     });
 
-    const b = bookingDoc.data();
     document.getElementById('qr-input-field').value = '';
-    showToast(`✅ تم تسجيل حضور @${b.userId} — ${b.serviceName}`);
+    showToast(`✅ تم تسجيل حضور @${b.userId || b.user} — ${b.serviceName || b.service}`);
     loadOwnerDashboard();
   } catch(e) {
     showToast('خطأ في التحقق');
