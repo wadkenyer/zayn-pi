@@ -1721,6 +1721,17 @@ async function loadBookings() {
         else refundHint = '❌ لا استرداد (أقل من ساعتين)';
       }
 
+      const statusLabel = b.status === 'accepted' ? 'مقبول ✓' :
+                          b.status === 'cancelled' || isCancelled ? 'ملغي ✗' :
+                          b.status === 'checkedin' ? 'حضر 📍' :
+                          b.status === 'completed' ? 'مكتمل ✓' :
+                          b.status === 'rejected' ? 'مرفوض ✗' :
+                          'قيد الانتظار ⏳';
+      const statusClass = (b.status === 'cancelled' || isCancelled) ? 'status-cancelled' :
+                          b.status === 'accepted' || b.status === 'completed' ? 'status-confirmed' :
+                          b.status === 'rejected' ? 'status-cancelled' :
+                          'status-pending';
+
       html += `
         <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${docId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -1730,9 +1741,7 @@ async function loadBookings() {
                 <i class="fas fa-scissors"></i> ${b.service || b.serviceName || 'خدمة'} · ${b.city || b.salonCity || '—'}
               </div>
             </div>
-            <span class="booking-status ${isCancelled ? 'status-cancelled' : 'status-confirmed'}">
-              ${isCancelled ? 'ملغي ✗' : 'مؤكد ✓'}
-            </span>
+            <span class="booking-status ${statusClass}">${statusLabel}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
             <div style="color:var(--teal);font-weight:700;font-size:14px;">
@@ -1741,10 +1750,15 @@ async function loadBookings() {
             <div style="font-weight:900;font-size:16px;">${b.total || b.amount} Pi</div>
           </div>
           ${refundHint ? `<div style="font-size:12px;color:var(--gray);margin-top:6px;">${refundHint}</div>` : ''}
-          <div style="font-size:11px;color:#bbb;margin-top:6px;">
+          ${b.checkInCode && !isCancelled && b.status !== 'rejected' ? `
+          <div style="margin-top:12px;background:linear-gradient(135deg,var(--dark),#1a2f42);border-radius:14px;padding:14px;text-align:center;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:6px;">🔑 كود الدخول — أعطه لصاحب الصالون</div>
+            <div style="font-size:32px;font-weight:900;color:var(--teal);letter-spacing:8px;">${b.checkInCode}</div>
+          </div>` : ''}
+          <div style="font-size:11px;color:#bbb;margin-top:8px;">
             TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
           </div>
-          ${canCancel ? `
+          ${canCancel && b.status !== 'rejected' ? `
           <button onclick="cancelBooking('${docId}', '${b.dateTime}', ${b.total || b.amount})"
             style="margin-top:12px;width:100%;padding:10px;border:2px solid #ef4444;border-radius:12px;
             background:transparent;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">
