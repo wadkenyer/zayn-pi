@@ -779,6 +779,66 @@
     margin-left: 8px;
   }
 
+  /* ===== PENDING BOOKINGS (OWNER) ===== */
+  .pending-booking-item {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    border-right: 4px solid var(--gold);
+  }
+
+  .pending-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .accept-btn {
+    flex: 1;
+    padding: 10px;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .accept-btn:hover { background: var(--teal-dark); }
+
+  .reject-btn {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    color: #ef4444;
+    border: 2px solid #ef4444;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .reject-btn:hover { background: #fef2f2; }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .status-pending { background: #FFF7E0; color: #B8860B; }
+  .status-accepted { background: #E6FAF8; color: var(--teal-dark); }
+  .status-rejected { background: #FEE2E2; color: #B91C1C; }
+  .status-completed { background: #E6FAF8; color: var(--teal-dark); }
+  .status-cancelled { background: #FEE2E2; color: #B91C1C; }
+  .status-checkedin { background: #EDE9FE; color: #6D28D9; }
+
   /* ===== SCROLL ===== */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -987,6 +1047,17 @@
     <button class="add-service-btn" onclick="openAddServiceModal()">
       <i class="fas fa-plus"></i> إضافة خدمة جديدة
     </button>
+
+    <!-- Pending Bookings -->
+    <div class="section-title">حجوزات تنتظر القبول</div>
+    <div id="owner-pending-list" style="padding: 0 20px;"></div>
+
+    <!-- QR Check-In -->
+    <div class="section-title">تحقق من حضور الزبون (QR)</div>
+    <div style="padding: 0 20px; margin-bottom: 20px; display:flex; gap:8px;">
+      <input type="text" id="qr-input-field" class="form-input" placeholder="أدخل كود الـ 6 أرقام" maxlength="6" style="flex:1;">
+      <button onclick="verifyCheckIn()" style="padding:12px 18px;background:var(--teal);color:#fff;border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">تحقق</button>
+    </div>
 
     <!-- Recent Bookings -->
     <div class="section-title">آخر الحجوزات</div>
@@ -1979,7 +2050,7 @@ window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhon
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ownerPhone: userPhone,
-            salonName: ownerData?.name || 'الصالون',
+            salonName: ownerSalonData?.name || 'الصالون',
             customerName: userId,
             serviceName,
             dateTime,

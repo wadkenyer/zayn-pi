@@ -59,8 +59,8 @@
     </nav>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
@@ -89,7 +89,11 @@ function getBookingFromURL() {
     currentBooking = {
         salon: params.get("salon") || "صالون غير محدد",
         price: parseFloat(params.get("price")) || 0,
-        salonId: params.get("id") || "unknown"
+        salonId: params.get("id") || "unknown",
+        service: params.get("service") || "",
+        date: params.get("date") || "",
+        time: params.get("time") || "",
+        dateTime: params.get("dateTime") || ""
     };
 }
 
@@ -147,10 +151,24 @@ window.startPayment = async () => {
             onReadyForServerCompletion: async (paymentId, txid) => {
                 // حفظ الحجز في Firestore
                 await addDoc(collection(db, "bookings"), {
+                    userId: user.username,
                     user: user.username,
+                    salonId: currentBooking.salonId,
+                    salonName: currentBooking.salon,
                     salon: currentBooking.salon,
+                    serviceName: currentBooking.service || 'حجز',
+                    service: currentBooking.service || 'حجز',
+                    date: currentBooking.date || '',
+                    time: currentBooking.time || '',
+                    dateTime: currentBooking.dateTime || '',
                     amount: currentBooking.price,
+                    total: currentBooking.price,
+                    servicePrice: currentBooking.price,
                     txid: txid,
+                    status: 'pending',
+                    paymentStatus: 'deposit_paid',
+                    checkInCode: Math.floor(100000 + Math.random() * 900000).toString(),
+                    isReviewed: false,
                     createdAt: serverTimestamp()
                 });
 
