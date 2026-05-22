@@ -1397,6 +1397,11 @@ function renderSalons(salons) {
     container.innerHTML = `<div class="empty-state"><i class="fas fa-store-slash"></i><p>لا توجد صالونات في هذه الفئة بعد</p></div>`;
     return;
   }
+
+  // حفظ الصالونات في map للوصول السريع من onclick
+  window._salonMap = {};
+  salons.forEach(s => { window._salonMap[s.id] = s; });
+
   const isWomen = currentGender === 'women';
   container.innerHTML = salons.map(s => `
     <div class="salon-card">
@@ -1427,7 +1432,7 @@ function renderSalons(salons) {
             من <strong>${s.services.length ? Math.min(...s.services.map(sv=>sv.price)) : '—'} Pi</strong>
           </div>
           <button
-            onclick='openBookingModal(${JSON.stringify(s).replace(/'/g, "&#39;")})'
+            onclick="openBookingModal('${s.id}')"
             class="book-btn ${isWomen ? 'book-btn-women' : ''}"
             ${!s.available ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}
           >
@@ -1448,7 +1453,14 @@ window.filterSalons = (val) => {
 };
 
 // ===== OPEN BOOKING MODAL =====
-window.openBookingModal = (salon) => {
+window.openBookingModal = (salonOrId) => {
+  // قبول ID أو كائن مباشر
+  const salon = (typeof salonOrId === 'string')
+    ? (window._salonMap && window._salonMap[salonOrId])
+    : salonOrId;
+
+  if (!salon) { showToast('تعذّر تحميل بيانات الصالون'); return; }
+
   if (!currentUser) {
     showToast('سجّل دخولك أولاً بـ Pi');
     return;
