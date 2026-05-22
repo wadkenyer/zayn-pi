@@ -2114,28 +2114,38 @@ window.verifyCheckIn = async () => {
   if (code.length !== 6) return showToast('الكود يجب أن يكون 6 أرقام');
 
   try {
-    // ابحث عن الحجز بالكود
+    // ابحث عن الحجز بالكود بغض النظر عن الحالة
     const q = query(
       collection(db, "bookings"),
       where("salonId", "==", currentUser.username),
-      where("checkInCode", "==", code),
-      where("status", "==", "accepted")
+      where("checkInCode", "==", code)
     );
     const snap = await getDocs(q);
 
     if (snap.empty) {
-      return showToast('❌ كود غير صحيح أو الحجز غير مقبول');
+      return showToast('❌ كود غير صحيح');
     }
 
     const bookingDoc = snap.docs[0];
+    const b = bookingDoc.data();
+
+    // التحقق من حالة الحجز
+    if (b.status === 'cancelled' || b.status === 'rejected') {
+      return showToast('❌ هذا الحجز ملغي أو مرفوض');
+    }
+    if (b.status === 'checkedin') {
+      return showToast(`⚠️ تم تسجيل حضور @${b.userId || b.user} مسبقاً`);
+    }
+
+    // تسجيل الحضور + قبول تلقائي إن لم يُقبل بعد
     await updateDoc(doc(db, "bookings", bookingDoc.id), {
       status: 'checkedin',
+      acceptedAt: b.acceptedAt || serverTimestamp(),
       checkedInAt: serverTimestamp()
     });
 
-    const b = bookingDoc.data();
     document.getElementById('qr-input-field').value = '';
-    showToast(`✅ تم تسجيل حضور @${b.userId} — ${b.serviceName}`);
+    showToast(`✅ تم تسجيل حضور @${b.userId || b.user} — ${b.serviceName || b.service}`);
     loadOwnerDashboard();
   } catch(e) {
     showToast('خطأ في التحقق');
