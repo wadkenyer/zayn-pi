@@ -1682,7 +1682,7 @@ window.confirmBooking = async () => {
                 customerName: currentUser.username,
                 serviceName: selectedService.name,
                 dateTime: fullDateTime,
-                depositAmount: deposit,
+                depositAmount: total,
                 bookingId: bookingRef.id,
                 type: 'new_booking'
               })
@@ -1826,6 +1826,7 @@ async function loadBookings() {
             إلغاء الحجز
           </button>` : ''}
         </div>`;
+    }
 
     list.innerHTML = html;
 
