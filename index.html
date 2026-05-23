@@ -843,6 +843,40 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ===== STAR RATING ===== */
+  .stars-row { display:flex; gap:8px; justify-content:center; margin:16px 0; }
+  .star-btn {
+    font-size: 36px;
+    cursor: pointer;
+    color: #e0e0e0;
+    transition: color 0.15s, transform 0.15s;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+  }
+  .star-btn.active { color: var(--gold); transform: scale(1.15); }
+  .review-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px;
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    background: transparent;
+    color: #B8860B;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .review-done {
+    margin-top:10px;
+    text-align:center;
+    font-size:13px;
+    color:var(--teal-dark);
+    font-weight:700;
+  }
 </style>
 </head>
 <body>
@@ -1229,6 +1263,35 @@
       <button onclick="closeModal('add-service-modal')" style="flex:1;padding:14px;border:2px solid var(--border);border-radius:16px;background:transparent;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;">إلغاء</button>
       <button onclick="saveService()" class="confirm-btn" style="flex:2;margin-top:0;">حفظ الخدمة</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== REVIEW MODAL ===== -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:18px;font-weight:900;">⭐ قيّم تجربتك</h3>
+      <button onclick="closeModal('review-modal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray);">✕</button>
+    </div>
+    <div id="review-salon-name" style="text-align:center;font-size:15px;font-weight:700;color:var(--teal);margin-bottom:4px;"></div>
+    <div id="review-service-name" style="text-align:center;font-size:13px;color:var(--gray);margin-bottom:12px;"></div>
+    <p style="text-align:center;font-size:13px;color:var(--gray);">كيف كانت تجربتك؟</p>
+    <div class="stars-row" id="stars-row">
+      <button class="star-btn" data-v="1" onclick="selectStar(1)">★</button>
+      <button class="star-btn" data-v="2" onclick="selectStar(2)">★</button>
+      <button class="star-btn" data-v="3" onclick="selectStar(3)">★</button>
+      <button class="star-btn" data-v="4" onclick="selectStar(4)">★</button>
+      <button class="star-btn" data-v="5" onclick="selectStar(5)">★</button>
+    </div>
+    <div id="star-label" style="text-align:center;font-size:13px;color:var(--gray);margin-bottom:12px;min-height:20px;"></div>
+    <textarea id="review-comment" placeholder="اكتب تعليقك (اختياري)..."
+      style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:12px;
+      font-family:'Cairo',sans-serif;font-size:13px;resize:none;height:80px;box-sizing:border-box;"></textarea>
+    <button onclick="submitReview()"
+      style="margin-top:12px;width:100%;padding:13px;background:var(--gold);color:#fff;
+      border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:900;font-size:15px;cursor:pointer;">
+      إرسال التقييم
+    </button>
   </div>
 </div>
 
@@ -1825,6 +1888,11 @@ async function loadBookings() {
             background:transparent;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">
             إلغاء الحجز
           </button>` : ''}
+          ${(b.status === 'checkedin' || b.status === 'completed') && !b.isReviewed ? `
+          <button class="review-btn" onclick="openReviewModal('${docId}','${(b.salon||b.salonName||'').replace(/'/g,"\\'")}','${(b.service||b.serviceName||'').replace(/'/g,"\\'")}','${b.salonId||''}')">
+            ⭐ قيّم تجربتك
+          </button>` : ''}
+          ${b.isReviewed ? `<div class="review-done">✅ شكراً على تقييمك!</div>` : ''}
         </div>`;
     }
 
@@ -2425,6 +2493,82 @@ window.openModal = (id) => {
 };
 window.closeModal = (id) => {
   document.getElementById(id).classList.remove('open');
+};
+
+// ===== REVIEW SYSTEM =====
+let _reviewBookingId = null;
+let _reviewSalonId   = null;
+let _selectedStars   = 0;
+
+const starLabels = ['', 'سيء 😞', 'مقبول 😐', 'جيد 🙂', 'ممتاز 😊', 'رائع جداً 🤩'];
+
+window.openReviewModal = (bookingId, salonName, serviceName, salonId) => {
+  _reviewBookingId = bookingId;
+  _reviewSalonId   = salonId;
+  _selectedStars   = 0;
+  document.getElementById('review-salon-name').textContent  = salonName;
+  document.getElementById('review-service-name').textContent = serviceName;
+  document.getElementById('review-comment').value = '';
+  document.getElementById('star-label').textContent = '';
+  document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('active'));
+  openModal('review-modal');
+};
+
+window.selectStar = (val) => {
+  _selectedStars = val;
+  document.querySelectorAll('.star-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.v) <= val);
+  });
+  document.getElementById('star-label').textContent = starLabels[val] || '';
+};
+
+window.submitReview = async () => {
+  if (!_selectedStars) return showToast('اختر عدد النجوم أولاً');
+  const comment = document.getElementById('review-comment').value.trim();
+
+  try {
+    // 1. حدّث الحجز كـ isReviewed
+    await updateDoc(doc(db, "bookings", _reviewBookingId), {
+      isReviewed: true,
+      reviewStars: _selectedStars,
+      reviewComment: comment,
+      reviewedAt: serverTimestamp()
+    });
+
+    // 2. حدّث تقييم الصالون (متوسط متراكم)
+    if (_reviewSalonId) {
+      try {
+        const salonRef = doc(db, "salons", _reviewSalonId);
+        const salonSnap = await getDoc(salonRef);
+        if (salonSnap.exists()) {
+          const d = salonSnap.data();
+          const oldRating  = d.rating  || 5.0;
+          const oldReviews = d.reviews || 0;
+          const newReviews = oldReviews + 1;
+          const newRating  = parseFloat(((oldRating * oldReviews + _selectedStars) / newReviews).toFixed(1));
+          await updateDoc(salonRef, { rating: newRating, reviews: newReviews });
+        }
+      } catch(e) {}
+    }
+
+    closeModal('review-modal');
+    showToast('✅ شكراً! تم إرسال تقييمك');
+
+    // تحديث بطاقة الحجز بدون إعادة تحميل كاملة
+    const card = document.getElementById(`booking-${_reviewBookingId}`);
+    if (card) {
+      const reviewBtn = card.querySelector('.review-btn');
+      if (reviewBtn) {
+        const done = document.createElement('div');
+        done.className = 'review-done';
+        done.textContent = '✅ شكراً على تقييمك!';
+        reviewBtn.replaceWith(done);
+      }
+    }
+  } catch(e) {
+    showToast('خطأ في إرسال التقييم');
+    console.error(e);
+  }
 };
 
 // Close modal on overlay click
