@@ -1856,6 +1856,18 @@ async function loadBookings() {
                           b.status === 'checkedin' ? 'status-confirmed' :
                           'status-pending';
 
+      // زر التقييم — بناء منفصل لتجنب مشاكل التداخل
+      const canReview = (b.status === 'checkedin' || b.status === 'completed') && !b.isReviewed;
+      const safeSalon   = (b.salon   || b.salonName   || '').replace(/'/g, ' ').replace(/"/g, ' ');
+      const safeService = (b.service || b.serviceName || '').replace(/'/g, ' ').replace(/"/g, ' ');
+      const safeSalonId = (b.salonId || '');
+      let reviewHtml = '';
+      if (canReview) {
+        reviewHtml = '<button class="review-btn" onclick="openReviewModal(\'' + docId + '\',\'' + safeSalon + '\',\'' + safeService + '\',\'' + safeSalonId + '\')">⭐ قيّم تجربتك</button>';
+      } else if (b.isReviewed) {
+        reviewHtml = '<div class="review-done">✅ شكراً على تقييمك! ' + '★'.repeat(b.reviewStars || 5) + '</div>';
+      }
+
       html += `
         <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${docId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -1888,11 +1900,7 @@ async function loadBookings() {
             background:transparent;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">
             إلغاء الحجز
           </button>` : ''}
-          ${(b.status === 'checkedin' || b.status === 'completed') && !b.isReviewed ? `
-          <button class="review-btn" onclick="openReviewModal('${docId}','${(b.salon||b.salonName||'').replace(/'/g,"\\'")}','${(b.service||b.serviceName||'').replace(/'/g,"\\'")}','${b.salonId||''}')">
-            ⭐ قيّم تجربتك
-          </button>` : ''}
-          ${b.isReviewed ? `<div class="review-done">✅ شكراً على تقييمك!</div>` : ''}
+          ${reviewHtml}
         </div>`;
     }
 
