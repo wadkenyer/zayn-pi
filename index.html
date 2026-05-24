@@ -1268,7 +1268,7 @@
 
 <!-- ===== REVIEW MODAL ===== -->
 <div class="modal-overlay" id="review-modal">
-  <div class="modal-box">
+  <div class="modal-sheet">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <h3 style="font-size:18px;font-weight:900;">⭐ قيّم تجربتك</h3>
       <button onclick="closeModal('review-modal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray);">✕</button>
@@ -1283,13 +1283,13 @@
       <button class="star-btn" data-v="4" onclick="selectStar(4)">★</button>
       <button class="star-btn" data-v="5" onclick="selectStar(5)">★</button>
     </div>
-    <div id="star-label" style="text-align:center;font-size:13px;color:var(--gray);margin-bottom:12px;min-height:20px;"></div>
+    <div id="star-label" style="text-align:center;font-size:14px;font-weight:700;color:var(--dark);margin-bottom:12px;min-height:22px;"></div>
     <textarea id="review-comment" placeholder="اكتب تعليقك (اختياري)..."
-      style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:12px;
+      style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;
       font-family:'Cairo',sans-serif;font-size:13px;resize:none;height:80px;box-sizing:border-box;"></textarea>
     <button onclick="submitReview()"
-      style="margin-top:12px;width:100%;padding:13px;background:var(--gold);color:#fff;
-      border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:900;font-size:15px;cursor:pointer;">
+      style="margin-top:14px;width:100%;padding:14px;background:var(--gold);color:#fff;
+      border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:900;font-size:16px;cursor:pointer;">
       إرسال التقييم
     </button>
   </div>
