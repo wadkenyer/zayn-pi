@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <style>
   :root {
     --teal: #0ABFA3;
@@ -1319,6 +1320,11 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 const fbAuth = getAuth(app);
 
+// ===== XSS PROTECTION =====
+const clean = (str) => (typeof DOMPurify !== 'undefined')
+  ? DOMPurify.sanitize(String(str ?? ''), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+  : String(str ?? '').replace(/[<>"'&]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c]));
+
 // ===== STATE =====
 let currentUser = null;
 let currentGender = 'men';
@@ -1473,7 +1479,7 @@ function renderSalons(salons) {
   container.innerHTML = salons.map(s => `
     <div class="salon-card">
       <div class="salon-img-wrap">
-        <img src="${s.img}" class="salon-img" alt="${s.name}" onerror="this.src='https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=600'">
+        <img src="${clean(s.img)}" class="salon-img" alt="${clean(s.name)}" onerror="this.src='https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=600'">
         <span class="availability-badge ${s.available ? 'available' : 'busy'}">
           ${s.available ? '🟢 متاح' : '🔴 مشغول'}
         </span>
@@ -1482,16 +1488,16 @@ function renderSalons(salons) {
         </span>
       </div>
       <div class="salon-body">
-        <div class="salon-name">${s.name}</div>
+        <div class="salon-name">${clean(s.name)}</div>
         <div class="salon-meta">
-          <span><i class="fas fa-map-marker-alt" style="color:var(--teal)"></i> ${s.city}</span>
-          <span class="rating">★ ${s.rating}</span>
-          <span style="color:var(--gray)">(${s.reviews} تقييم)</span>
+          <span><i class="fas fa-map-marker-alt" style="color:var(--teal)"></i> ${clean(s.city)}</span>
+          <span class="rating">★ ${clean(s.rating)}</span>
+          <span style="color:var(--gray)">(${clean(s.reviews)} تقييم)</span>
         </div>
-        ${s.openTime ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;"><i class="fas fa-clock" style="color:var(--teal)"></i> ${s.openTime} - ${s.closeTime}</div>` : ''}
-        ${s.desc ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;font-style:italic;">${s.desc}</div>` : ''}
+        ${s.openTime ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;"><i class="fas fa-clock" style="color:var(--teal)"></i> ${clean(s.openTime)} - ${clean(s.closeTime)}</div>` : ''}
+        ${s.desc ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;font-style:italic;">${clean(s.desc)}</div>` : ''}
         <div class="services-preview">
-          ${s.services.slice(0,3).map(sv => `<span class="service-tag ${isWomen ? 'service-tag-women' : ''}">${sv.name}</span>`).join('')}
+          ${s.services.slice(0,3).map(sv => `<span class="service-tag ${isWomen ? 'service-tag-women' : ''}">${clean(sv.name)}</span>`).join('')}
           ${s.services.length > 3 ? `<span class="service-tag" style="background:#f0f0f0;color:#888">+${s.services.length-3}</span>` : ''}
         </div>
         <div class="salon-footer">
@@ -1876,9 +1882,9 @@ async function loadBookings() {
         <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${docId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <div style="font-weight:900;font-size:16px;">${b.salon || b.salonName || '—'}</div>
+              <div style="font-weight:900;font-size:16px;">${clean(b.salon || b.salonName || '—')}</div>
               <div style="color:var(--gray);font-size:13px;margin-top:2px;">
-                <i class="fas fa-scissors"></i> ${b.service || b.serviceName || 'خدمة'} · ${b.city || b.salonCity || '—'}
+                <i class="fas fa-scissors"></i> ${clean(b.service || b.serviceName || 'خدمة')} · ${clean(b.city || b.salonCity || '—')}
               </div>
             </div>
             <span class="booking-status ${statusClass}">${statusLabel}</span>
