@@ -1305,6 +1305,9 @@ import {
   getFirestore, collection, addDoc, getDocs, doc, updateDoc, setDoc, getDoc,
   serverTimestamp, query, where, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth, signInWithCustomToken
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCVePZCyyeVw9xDlov2B_db8VsIEayw8Rk",
@@ -1313,7 +1316,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db  = getFirestore(app);
+const fbAuth = getAuth(app);
 
 // ===== STATE =====
 let currentUser = null;
@@ -2456,6 +2460,25 @@ window.initPi = async () => {
       }
     });
     currentUser = auth.user;
+
+    // ===== تسجيل دخول Firebase بتوكن مشتق من Pi =====
+    try {
+      const fbTokenRes = await fetch('/api/firebase-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          piAccessToken: auth.accessToken,
+          piUsername: auth.user.username
+        })
+      });
+      const fbTokenData = await fbTokenRes.json();
+      if (fbTokenData.firebaseToken) {
+        await signInWithCustomToken(fbAuth, fbTokenData.firebaseToken);
+        console.log('✅ Firebase Auth مرتبط بـ Pi');
+      }
+    } catch(e) {
+      console.warn('Firebase Auth fallback:', e.message);
+    }
 
     const badge = `<div class="user-badge"><i class="fas fa-circle" style="color:var(--gold);font-size:8px"></i> ${currentUser.username}</div>`;
     document.getElementById('auth-area').innerHTML = badge;

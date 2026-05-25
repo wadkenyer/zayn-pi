@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // دالة مساعدة - هل المستخدم مسجل دخول؟
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Pi username الخاص بالمستخدم الحالي
+    function me() {
+      return request.auth.uid;
+    }
+
+    // ===== SALONS =====
+    match /salons/{salonId} {
+      // أي شخص يقرأ الصالونات (للعرض في الصفحة الرئيسية)
+      allow read: if true;
+
+      // إنشاء صالون: فقط صاحبه وبياناته صحيحة
+      allow create: if isAuth()
+        && me() == salonId
+        && request.resource.data.owner == me()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.city is string;
+
+      // تعديل: فقط صاحب الصالون
+      allow update: if isAuth() && me() == salonId;
+
+      // لا يُحذف أي صالون
+      allow delete: if false;
+    }
+
+    // ===== BOOKINGS =====
+    match /bookings/{bookingId} {
+      // القراءة: الزبون يرى حجوزاته، الصالون يرى حجوزاته
+      allow read: if isAuth() && (
+        resource.data.user    == me() ||
+        resource.data.salonId == me()
+      );
+
+      // الإنشاء: فقط من الزبون المصادق مع تحقق من البيانات
+      allow create: if isAuth()
+        && request.resource.data.user   == me()
+        && request.resource.data.userId == me()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.total  is number
+        && request.resource.data.total  > 0
+        && request.resource.data.total  < 1000
+        && request.resource.data.salonId is string;
+
+      // التعديل: الزبون يُلغي، الصالون يقبل/يرفض/يسجّل حضور
+      allow update: if isAuth() && (
+        resource.data.user    == me() ||
+        resource.data.salonId == me()
+      );
+
+      allow delete: if false;
+    }
+
+    // ===== NOTIFICATIONS =====
+    match /notifications/{notifId} {
+      // الصالون يقرأ إشعاراته فقط
+      allow read:   if isAuth() && resource.data.to == me();
+      allow create: if isAuth();
+      allow update: if isAuth() && resource.data.to == me();
+      allow delete: if false;
+    }
+
+    // ===== حظر كل شيء آخر =====
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
