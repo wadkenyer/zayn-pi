@@ -1304,7 +1304,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, addDoc, getDocs, doc, updateDoc, setDoc, getDoc,
-  serverTimestamp, query, where, orderBy, limit
+  serverTimestamp, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, signInWithCustomToken, signInAnonymously
@@ -1812,8 +1812,7 @@ async function loadBookings() {
   try {
     const q = query(
       collection(db, "bookings"),
-      where("user", "==", currentUser.username),
-      orderBy("createdAt", "desc")
+      where("user", "==", currentUser.username)
     );
     const snap = await getDocs(q);
 
@@ -1822,11 +1821,18 @@ async function loadBookings() {
       return;
     }
 
+    // ترتيب من الأحدث إلى الأقدم (بدون index مركّب)
+    const sortedDocs = snap.docs.sort((a, b) => {
+      const ta = a.data().createdAt?.toMillis?.() || 0;
+      const tb = b.data().createdAt?.toMillis?.() || 0;
+      return tb - ta;
+    });
+
     let totalPi = 0;
     let count = 0;
     let html = '';
 
-    for (const docSnap of snap.docs) {
+    for (const docSnap of sortedDocs) {
       const b = docSnap.data();
       const docId = docSnap.id;
       count++;
@@ -2058,8 +2064,7 @@ async function loadOwnerDashboard() {
     const pendingQ = query(
       collection(db, "bookings"),
       where("salonId", "==", currentUser.username),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "pending")
     );
     const pendingSnap = await getDocs(pendingQ);
     let pendingCount = 0;
@@ -2102,9 +2107,7 @@ async function loadOwnerDashboard() {
     // ===== كل الحجوزات =====
     const bQuery = query(
       collection(db, "bookings"),
-      where("salonId", "==", currentUser.username),
-      orderBy("createdAt", "desc"),
-      limit(10)
+      where("salonId", "==", currentUser.username)
     );
     const bSnap = await getDocs(bQuery);
 
