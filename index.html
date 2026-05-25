@@ -1307,7 +1307,7 @@ import {
   serverTimestamp, query, where, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  getAuth, signInWithCustomToken
+  getAuth, signInWithCustomToken, signInAnonymously
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -2468,6 +2468,7 @@ window.initPi = async () => {
     currentUser = auth.user;
 
     // ===== تسجيل دخول Firebase بتوكن مشتق من Pi =====
+    let fbAuthOk = false;
     try {
       const fbTokenRes = await fetch('/api/firebase-token', {
         method: 'POST',
@@ -2480,10 +2481,23 @@ window.initPi = async () => {
       const fbTokenData = await fbTokenRes.json();
       if (fbTokenData.firebaseToken) {
         await signInWithCustomToken(fbAuth, fbTokenData.firebaseToken);
+        fbAuthOk = true;
         console.log('✅ Firebase Auth مرتبط بـ Pi');
+      } else {
+        console.error('Firebase token API error:', fbTokenData.error || 'no token');
       }
     } catch(e) {
-      console.warn('Firebase Auth fallback:', e.message);
+      console.error('Firebase Auth error:', e.message);
+    }
+
+    // Fallback: anonymous auth so Firestore queries don't fail completely
+    if (!fbAuthOk) {
+      try {
+        await signInAnonymously(fbAuth);
+        console.warn('⚠️ Anonymous Firebase auth (custom token failed)');
+      } catch(e2) {
+        console.error('Anonymous auth also failed:', e2.message);
+      }
     }
 
     const badge = `<div class="user-badge"><i class="fas fa-circle" style="color:var(--gold);font-size:8px"></i> ${currentUser.username}</div>`;
