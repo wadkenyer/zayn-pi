@@ -33,8 +33,11 @@ service cloud.firestore {
 
     // ===== BOOKINGS =====
     match /bookings/{bookingId} {
-      // أي مستخدم مسجّل دخوله يرى حجوزاته (يُصفَّى من جهة العميل)
-      allow read: if isAuth();
+      // الزبون يرى حجوزاته فقط، وصاحب الصالون يرى حجوزات صالونه فقط
+      allow read: if isAuth() && (
+        resource.data.user    == me() ||
+        resource.data.salonId == me()
+      );
 
       allow create: if isAuth()
         && request.resource.data.user    == me()
