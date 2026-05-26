@@ -1,31 +1,43 @@
-// api/test.js — تشخيص مؤقت، احذفه بعد الإصلاح
-import { getAdminDb, cors } from './_admin.js';
-
+// api/test.js — تشخيص مؤقت
 export default async function handler(req, res) {
-  cors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'application/json');
 
-  const results = { env: {}, firebase: null, query: null };
+  const result = { step: 'start', env: {}, error: null };
 
-  // 1. تحقق من وجود متغيرات البيئة
-  results.env = {
-    PROJECT_ID:    !!process.env.FIREBASE_PROJECT_ID,
-    CLIENT_EMAIL:  !!process.env.FIREBASE_CLIENT_EMAIL,
-    PRIVATE_KEY:   !!process.env.FIREBASE_PRIVATE_KEY,
-    KEY_STARTS:    process.env.FIREBASE_PRIVATE_KEY?.substring(0, 30) || 'MISSING'
+  // 1. تحقق من المتغيرات
+  result.env = {
+    PROJECT_ID:   !!process.env.FIREBASE_PROJECT_ID,
+    CLIENT_EMAIL: !!process.env.FIREBASE_CLIENT_EMAIL,
+    PRIVATE_KEY:  !!process.env.FIREBASE_PRIVATE_KEY,
+    KEY_PREVIEW:  (process.env.FIREBASE_PRIVATE_KEY || '').substring(0, 40)
   };
+  result.step = 'env_checked';
 
-  // 2. جرّب الاتصال بـ Firebase
+  // 2. جرّب import Firebase Admin مباشرة
   try {
-    const db = getAdminDb();
-    results.firebase = 'connected';
+    const { initializeApp, cert, getApps, getApp } = await import('firebase-admin/app');
+    const { getFirestore } = await import('firebase-admin/firestore');
+    result.step = 'imported';
 
-    // 3. جرّب قراءة بسيطة
+    if (!getApps().length) {
+      const projectId   = process.env.FIREBASE_PROJECT_ID;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey  = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
+    }
+    result.step = 'initialized';
+
+    const db = getFirestore(getApp());
     const snap = await db.collection('bookings').limit(1).get();
-    results.query = `OK — found ${snap.size} doc(s)`;
-  } catch (e) {
-    results.firebase = 'ERROR: ' + e.message;
+    result.step = 'queried';
+    result.bookingsCount = snap.size;
+    result.success = true;
+
+  } catch(e) {
+    result.error = e.message;
+    result.stack = e.stack?.split('\n').slice(0,3).join(' | ');
   }
 
-  return res.status(200).json(results);
+  res.status(200).end(JSON.stringify(result, null, 2));
 }
