@@ -1658,10 +1658,13 @@ window.confirmBooking = async () => {
     });
     const slotData = await slotCheck.json();
     if (!slotData.available) {
+      if (confirmBtn) confirmBtn.disabled = false;
       return showToast('❌ هذا الوقت محجوز — اختر وقتاً آخر');
     }
   } catch(e) {
-    console.log('slot check skipped:', e.message);
+    console.warn('slot check failed:', e.message);
+    if (confirmBtn) confirmBtn.disabled = false;
+    return showToast('⚠️ تعذّر التحقق من الوقت، حاول مرة أخرى');
   }
 
   const total = +(selectedService.price + 0.1).toFixed(1);
@@ -1729,7 +1732,6 @@ window.confirmBooking = async () => {
           status: "pending",
 
           // مالية — total هو المبلغ المدفوع فعلياً
-          servicePrice: selectedService.price,
           commission: 0.1,
           total: total,
           depositPaid: total,
