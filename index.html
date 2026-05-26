@@ -1303,8 +1303,8 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, getDocs, doc, updateDoc, setDoc, getDoc,
-  serverTimestamp, query, where, orderBy, limit
+  getFirestore, collection, getDocs, doc, getDoc,
+  query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, signInWithCustomToken, signInAnonymously
@@ -1702,85 +1702,43 @@ window.confirmBooking = async () => {
           });
         } catch(e) { console.log('complete endpoint not set'); }
 
-        // توليد كود QR Check-In
-        const checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-        const bookingRef = await addDoc(collection(db, "bookings"), {
-          // أطراف الحجز
-          userId: currentUser.username,
-          user: currentUser.username,
-          salonId: selectedSalon.id,
-          salonName: selectedSalon.name,
-          salon: selectedSalon.name,
-          salonCity: selectedSalon.city,
-          city: selectedSalon.city,
-          salonPhone: selectedSalon.phone || selectedSalon.ownerPhone || '',
-
-          // تفاصيل الخدمة
-          serviceName: selectedService.name,
-          service: selectedService.name,
-          serviceDuration: selectedService.duration || 30,
-          servicePrice: selectedService.price,
-          gender: selectedSalon.gender,
-
-          // موعد
-          date: date,
-          time: selectedTime,
-          dateTime: fullDateTime,
-
-          // حالة الحجز
-          status: "pending",
-
-          // مالية — total هو المبلغ المدفوع فعلياً
-          commission: 0.1,
-          total: total,
-          depositPaid: total,
-          txid: txid,
-          paymentStatus: "paid",
-
-          // QR
-          checkInCode: checkInCode,
-          isReviewed: false,
-
-          createdAt: serverTimestamp()
-        });
-
-        // ===== إرسال إشعار WhatsApp لصاحب الصالون =====
-        if (selectedSalon.phone || selectedSalon.ownerPhone || selectedSalon.salonPhone) {
-          try {
-            await fetch('/api/notify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                ownerPhone: selectedSalon.phone || selectedSalon.ownerPhone || selectedSalon.salonPhone,
-                salonName: selectedSalon.name,
-                customerName: currentUser.username,
-                serviceName: selectedService.name,
-                dateTime: fullDateTime,
-                depositAmount: total,
-                bookingId: bookingRef.id,
-                type: 'new_booking'
-              })
-            });
-          } catch(e) {
-            console.log('WhatsApp notify failed:', e.message);
-          }
-        }
-
-        // ===== حفظ الإشعار في Firebase أيضاً =====
-        try {
-          await addDoc(collection(db, "notifications"), {
-            to: selectedSalon.id,
-            type: 'new_booking',
-            title: 'حجز جديد',
-            body: `@${currentUser.username} حجز ${selectedService.name} في ${fullDateTime}`,
-            bookingId: bookingRef.id,
+        // إنشاء الحجز عبر API (Admin SDK)
+        const bookingRes = await fetch('/api/create-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: currentUser.username,
             salonId: selectedSalon.id,
-            isRead: false,
-            whatsappSent: !!(selectedSalon.phone),
-            createdAt: serverTimestamp()
-          });
-        } catch(e) {}
+            salonName: selectedSalon.name,
+            salonCity: selectedSalon.city,
+            salonPhone: selectedSalon.phone || selectedSalon.ownerPhone || '',
+            serviceName: selectedService.name,
+            servicePrice: selectedService.price,
+            serviceDuration: selectedService.duration || 30,
+            gender: selectedSalon.gender,
+            date, time: selectedTime, dateTime: fullDateTime,
+            total, txid, paymentId
+          })
+        });
+        const bookingData = await bookingRes.json();
+
+        // إشعار WhatsApp
+        if (selectedSalon.phone || selectedSalon.ownerPhone) {
+          fetch('/api/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ownerPhone: selectedSalon.phone || selectedSalon.ownerPhone,
+              salonName: selectedSalon.name,
+              customerName: currentUser.username,
+              serviceName: selectedService.name,
+              dateTime: fullDateTime,
+              depositAmount: total,
+              bookingId: bookingData.bookingId,
+              type: 'new_booking'
+            })
+          }).catch(() => {});
+        }
 
         closeModal('booking-modal');
         showToast(`✅ تم الحجز — ينتظر قبول الصالون`);
@@ -1812,25 +1770,28 @@ async function loadBookings() {
   list.innerHTML = `<div class="spinner"><i class="fas fa-circle-notch fa-spin"></i></div>`;
 
   try {
-    const q = query(
-      collection(db, "bookings"),
-      where("user", "==", currentUser.username),
-      orderBy("createdAt", "desc")
-    );
-    const snap = await getDocs(q);
+    const apiRes = await fetch('/api/get-bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username, type: 'user' })
+    });
+    const apiData = await apiRes.json();
 
-    if (snap.empty) {
+    if (!apiData.success || !apiData.bookings?.length) {
       list.innerHTML = `<div class="empty-state"><i class="fas fa-calendar-times"></i><p>لا توجد حجوزات بعد</p></div>`;
       return;
     }
+
+    const sortedBookings = apiData.bookings.sort((a, b) => {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
     let totalPi = 0;
     let count = 0;
     let html = '';
 
-    for (const docSnap of snap.docs) {
-      const b = docSnap.data();
-      const docId = docSnap.id;
+    for (const b of sortedBookings) {
+      const docId = b.id;
       count++;
       totalPi += b.servicePrice || 0;
       const isWomen = b.gender === 'women';
@@ -1841,14 +1802,7 @@ async function loadBookings() {
       const canCancel = !isCancelled && !isRejected && hoursLeft > 0;
       const showCode = !isCancelled && !isRejected && b.status !== 'checkedin';
 
-      // إذا لم يكن للحجز كود — أنشئ واحداً واحفظه تلقائياً
-      let checkInCode = b.checkInCode;
-      if (!checkInCode && showCode) {
-        checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
-        try {
-          await updateDoc(doc(db, "bookings", docId), { checkInCode });
-        } catch(e) {}
-      }
+      const checkInCode = b.checkInCode || '';
 
       let refundHint = '';
       if (canCancel) {
@@ -1996,18 +1950,14 @@ window.registerSalon = async () => {
       onReadyForServerCompletion: async (paymentId, txid) => {
         try { await fetch('/api/complete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId, txid}) }); } catch(e) {}
 
-        const salonRef = doc(db, "salons", currentUser.username);
-        await setDoc(salonRef, {
-          name, city, gender, img, phone, desc,
-          openTime, closeTime,
-          owner: currentUser.username,
-          available: true,
-          rating: 5.0,
-          reviews: 0,
-          revenue: 0,
-          registrationTxid: txid,
-          services: [],
-          createdAt: serverTimestamp()
+        await fetch('/api/save-salon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ownerUsername: currentUser.username,
+            action: 'register',
+            data: { name, city, gender, img, phone, desc, openTime, closeTime, txid }
+          })
         });
 
         isOwner = true;
@@ -2057,21 +2007,22 @@ async function loadOwnerDashboard() {
     if (ownerSalonData.closeTime) document.getElementById('edit-close-time').value = ownerSalonData.closeTime;
 
     // ===== حجوزات معلقة تنتظر القبول =====
-    const pendingQ = query(
-      collection(db, "bookings"),
-      where("salonId", "==", currentUser.username),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
-    );
-    const pendingSnap = await getDocs(pendingQ);
+    const pendingApiRes = await fetch('/api/get-bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username, type: 'salon-pending' })
+    });
+    const pendingApiData = await pendingApiRes.json();
+    const pendingBookings = pendingApiData.bookings || [];
     let pendingCount = 0;
     let pendingHtml = '';
 
-    pendingSnap.forEach(d => {
-      const b = d.data();
+    pendingBookings.forEach(d => {
+      const b = d;
+      b.id = d.id;
       pendingCount++;
       pendingHtml += `
-        <div class="pending-booking-item" id="pending-${d.id}">
+        <div class="pending-booking-item" id="pending-${b.id}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
               <div style="font-weight:900;font-size:15px;">@${b.userId || b.user}</div>
@@ -2085,10 +2036,10 @@ async function loadOwnerDashboard() {
             <span class="status-badge status-pending">⏳ انتظار</span>
           </div>
           <div class="pending-actions">
-            <button class="accept-btn" onclick="acceptBooking('${d.id}', '${b.userId || b.user}', '${b.serviceName || b.service || ''}', '${b.dateTime || ''}', '')">
+            <button class="accept-btn" onclick="acceptBooking('${b.id}', '${b.userId || b.user}', '${b.serviceName || b.service || ''}', '${b.dateTime || ''}', '')">
               ✅ قبول
             </button>
-            <button class="reject-btn" onclick="rejectBooking('${d.id}')">
+            <button class="reject-btn" onclick="rejectBooking('${b.id}')">
               ❌ رفض
             </button>
           </div>
@@ -2102,13 +2053,13 @@ async function loadOwnerDashboard() {
     }
 
     // ===== كل الحجوزات =====
-    const bQuery = query(
-      collection(db, "bookings"),
-      where("salonId", "==", currentUser.username),
-      orderBy("createdAt", "desc"),
-      limit(10)
-    );
-    const bSnap = await getDocs(bQuery);
+    const allApiRes = await fetch('/api/get-bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser.username, type: 'salon' })
+    });
+    const allApiData = await allApiRes.json();
+    const allBookingsArr = (allApiData.bookings || []).sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0)).slice(0,30);
 
     let revenue = 0;
     let todayCount = 0;
@@ -2116,8 +2067,7 @@ async function loadOwnerDashboard() {
     let recentHtml = '';
     let completedCount = 0;
 
-    bSnap.forEach(d => {
-      const b = d.data();
+    allBookingsArr.forEach(b => {
       if (b.status === 'completed') {
         revenue += b.servicePrice || 0;
         completedCount++;
@@ -2200,29 +2150,13 @@ function renderOwnerServices() {
 // ===== قبول الحجز =====
 window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhone) => {
   try {
-    await updateDoc(doc(db, "bookings", bookingId), {
-      status: 'accepted',
-      acceptedAt: serverTimestamp()
+    const r = await fetch('/api/update-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingId, action: 'accept', callerUsername: currentUser.username })
     });
-
-    // إشعار الزبون بالقبول (إذا كان لديه رقم)
-    if (userPhone) {
-      try {
-        await fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ownerPhone: userPhone,
-            salonName: ownerSalonData?.name || 'الصالون',
-            customerName: userId,
-            serviceName,
-            dateTime,
-            type: 'accepted'
-          })
-        });
-      } catch(e) {}
-    }
-
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ: ' + (d.error || 'فشل القبول'));
     showToast('✅ تم قبول الحجز');
     loadOwnerDashboard();
   } catch(e) {
@@ -2234,12 +2168,13 @@ window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhon
 window.rejectBooking = async (bookingId) => {
   const reason = prompt('سبب الرفض (اختياري):') || 'ظرف طارئ';
   try {
-    await updateDoc(doc(db, "bookings", bookingId), {
-      status: 'rejected',
-      cancelReason: reason,
-      cancelledBy: 'owner',
-      cancelledAt: serverTimestamp()
+    const r = await fetch('/api/update-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingId, action: 'reject', callerUsername: currentUser.username, reason })
     });
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ: ' + (d.error || 'فشل الرفض'));
     showToast('تم رفض الحجز');
     loadOwnerDashboard();
   } catch(e) {
@@ -2253,38 +2188,27 @@ window.verifyCheckIn = async () => {
   if (!/^\d{6}$/.test(code)) return showToast('الكود يجب أن يكون 6 أرقام فقط');
 
   try {
-    // ابحث عن الحجز بالكود بغض النظر عن الحالة
-    const q = query(
-      collection(db, "bookings"),
-      where("salonId", "==", currentUser.username),
-      where("checkInCode", "==", code)
-    );
-    const snap = await getDocs(q);
-
-    if (snap.empty) {
-      return showToast('❌ كود غير صحيح');
-    }
-
-    const bookingDoc = snap.docs[0];
-    const b = bookingDoc.data();
-
-    // التحقق من حالة الحجز
-    if (b.status === 'cancelled' || b.status === 'rejected') {
-      return showToast('❌ هذا الحجز ملغي أو مرفوض');
-    }
-    if (b.status === 'checkedin') {
-      return showToast(`⚠️ تم تسجيل حضور @${b.userId || b.user} مسبقاً`);
-    }
-
-    // تسجيل الحضور + قبول تلقائي إن لم يُقبل بعد
-    await updateDoc(doc(db, "bookings", bookingDoc.id), {
-      status: 'checkedin',
-      acceptedAt: b.acceptedAt || serverTimestamp(),
-      checkedInAt: serverTimestamp()
+    const r = await fetch('/api/update-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: 'by-code',
+        action: 'checkin',
+        callerUsername: currentUser.username,
+        checkInCode: code
+      })
     });
+    const d = await r.json();
+
+    if (!d.success) {
+      return showToast(d.alreadyCheckedIn
+        ? `⚠️ ${d.error}`
+        : `❌ ${d.error || 'كود غير صحيح'}`
+      );
+    }
 
     document.getElementById('qr-input-field').value = '';
-    showToast(`✅ تم تسجيل حضور @${b.userId || b.user} — ${b.serviceName || b.service}`);
+    showToast(`✅ تم تسجيل حضور @${d.customerName} — ${d.serviceName}`);
     loadOwnerDashboard();
   } catch(e) {
     showToast('خطأ في التحقق');
@@ -2306,7 +2230,17 @@ window.toggleAvailability = async () => {
   }
 
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), { available: salonAvailable });
+    const r = await fetch('/api/save-salon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'toggle-availability', data: {} })
+    });
+    const d = await r.json();
+    if (d.success) {
+      salonAvailable = d.available;
+      if (salonAvailable) { toggle.classList.add('on'); label.textContent = '🟢 متاح الآن'; }
+      else { toggle.classList.remove('on'); label.textContent = '🔴 مشغول الآن'; }
+    }
     showToast(salonAvailable ? 'الصالون الآن متاح ✓' : 'تم التحديث: مشغول الآن');
   } catch(e) {
     showToast('تحقق من الاتصال');
@@ -2335,10 +2269,15 @@ window.updateSalonData = async () => {
   if (Object.keys(updates).length === 0) return showToast('لا يوجد تعديلات للحفظ');
 
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), updates);
+    const r = await fetch('/api/save-salon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-settings', data: updates })
+    });
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ في الحفظ: ' + (d.error || ''));
     showToast('✅ تم حفظ التعديلات');
     loadSalons();
-    // تحديث ownerSalonData
     ownerSalonData = { ...ownerSalonData, ...updates };
     if (updates.name) document.getElementById('owner-salon-name-header').textContent = updates.name;
   } catch(e) {
@@ -2363,7 +2302,13 @@ window.saveService = async () => {
   ownerServices.push({ name, duration, price });
 
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), { services: ownerServices });
+    const r = await fetch('/api/save-salon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-services', data: { services: ownerServices } })
+    });
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ في الحفظ');
     closeModal('add-service-modal');
     renderOwnerServices();
     showToast('✓ تم إضافة الخدمة');
@@ -2375,7 +2320,11 @@ window.saveService = async () => {
 window.deleteService = async (idx) => {
   ownerServices.splice(idx, 1);
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), { services: ownerServices });
+    await fetch('/api/save-salon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-services', data: { services: ownerServices } })
+    });
     renderOwnerServices();
     showToast('تم حذف الخدمة');
   } catch(e) {}
@@ -2403,12 +2352,11 @@ window.cancelBooking = async (bookingId, dateTime, amount) => {
     const confirmed = confirm(`${data.message}\n\nهل تريد المتابعة؟`);
     if (!confirmed) return;
 
-    // 3. حدّث الحجز في Firebase كـ cancelled
-    await updateDoc(doc(db, "bookings", bookingId), {
-      status: 'cancelled',
-      cancelledAt: new Date().toISOString(),
-      refundPolicy: data.refundPolicy,
-      refundAmount: parseFloat(data.refundAmount)
+    // 3. حدّث الحجز عبر API
+    await fetch('/api/update-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingId, action: 'cancel', callerUsername: currentUser.username })
     });
 
     // 4. أظهر نتيجة واحدّث الواجهة
@@ -2580,28 +2528,32 @@ window.submitReview = async () => {
   const comment = document.getElementById('review-comment').value.trim();
 
   try {
-    // 1. حدّث الحجز كـ isReviewed
-    await updateDoc(doc(db, "bookings", _reviewBookingId), {
-      isReviewed: true,
-      reviewStars: _selectedStars,
-      reviewComment: comment,
-      reviewedAt: serverTimestamp()
+    // 1. حدّث الحجز عبر API
+    const rb = await fetch('/api/update-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: _reviewBookingId,
+        action: 'review',
+        callerUsername: currentUser.username,
+        reviewStars: _selectedStars,
+        reviewComment: comment
+      })
     });
+    const rd = await rb.json();
+    if (!rd.success) return showToast('خطأ في التقييم');
 
-    // 2. حدّث تقييم الصالون (متوسط متراكم)
+    // 2. حدّث تقييم الصالون عبر API
     if (_reviewSalonId) {
-      try {
-        const salonRef = doc(db, "salons", _reviewSalonId);
-        const salonSnap = await getDoc(salonRef);
-        if (salonSnap.exists()) {
-          const d = salonSnap.data();
-          const oldRating  = d.rating  || 5.0;
-          const oldReviews = d.reviews || 0;
-          const newReviews = oldReviews + 1;
-          const newRating  = parseFloat(((oldRating * oldReviews + _selectedStars) / newReviews).toFixed(1));
-          await updateDoc(salonRef, { rating: newRating, reviews: newReviews });
-        }
-      } catch(e) {}
+      fetch('/api/save-salon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerUsername: _reviewSalonId,
+          action: 'update-rating',
+          data: { stars: _selectedStars }
+        })
+      }).catch(() => {});
     }
 
     closeModal('review-modal');
