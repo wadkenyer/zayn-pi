@@ -1,6 +1,21 @@
 // api/check-slot.js
 // المهمة: منع حجز نفس الوقت مرتين في نفس الصالون
-// بسيط وفعّال — بدون تعقيد غير ضروري
+
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+function getAdminApp() {
+  if (getApps().length) return getApp();
+  const projectId   = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey  = process.env.FIREBASE_PRIVATE_KEY;
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error('Firebase Admin credentials missing (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)');
+  }
+  return initializeApp({
+    credential: cert({ projectId, clientEmail, privateKey: privateKey.replace(/\\n/g, '\n') }),
+  });
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,60 +30,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'salonId و date و time مطلوبة' });
   }
 
-  const PI_API_KEY = process.env.PI_API_KEY;
-
   try {
-    // نتحقق من Firebase REST API مباشرة
-    const projectId = 'zayn-pi';
+    const db = getFirestore(getAdminApp());
     const dateTime = `${date} ${time}`;
 
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+    // نجلب الحجوزات بنفس الصالون والوقت، ونُصفّي الملغاة في الكود
+    // لتجنّب الحاجة إلى composite index يشمل != على status
+    const snap = await db.collection('bookings')
+      .where('salonId', '==', salonId)
+      .where('dateTime', '==', dateTime)
+      .get();
 
-    const query = {
-      structuredQuery: {
-        from: [{ collectionId: 'bookings' }],
-        where: {
-          compositeFilter: {
-            op: 'AND',
-            filters: [
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'salonId' },
-                  op: 'EQUAL',
-                  value: { stringValue: salonId }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'dateTime' },
-                  op: 'EQUAL',
-                  value: { stringValue: dateTime }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'status' },
-                  op: 'NOT_EQUAL',
-                  value: { stringValue: 'cancelled' }
-                }
-              }
-            ]
-          }
-        },
-        limit: 1
-      }
-    };
-
-    const response = await fetch(firestoreUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    });
-
-    const data = await response.json();
-
-    // إذا وُجد حجز = الوقت محجوز
-    const isBooked = Array.isArray(data) && data.length > 0 && data[0].document;
+    const isBooked = snap.docs.some(d => d.data().status !== 'cancelled');
 
     return res.status(200).json({
       available: !isBooked,
@@ -77,7 +50,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('check-slot error:', error.message);
-    // في حال الخطأ نسمح بالحجز ونتحقق لاحقاً
-    return res.status(200).json({ available: true, message: 'تحقق جزئي' });
+    return res.status(500).json({ error: 'خطأ في التحقق من الوقت' });
   }
 }
