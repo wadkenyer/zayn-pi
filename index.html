@@ -1798,7 +1798,7 @@ async function loadBookings() {
       const isRejected = b.status === 'rejected';
       const bookingTime = new Date(b.dateTime);
       const hoursLeft = (bookingTime - new Date()) / (1000 * 60 * 60);
-      const canCancel = !isCancelled && !isRejected && hoursLeft > 0;
+      const canCancel = !isCancelled && !isRejected && b.status !== 'checkedin' && b.status !== 'completed' && hoursLeft > 0;
       const showCode = !isCancelled && !isRejected && b.status !== 'checkedin';
 
       const checkInCode = b.checkInCode || '';
