@@ -1303,7 +1303,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, addDoc, getDocs, doc, updateDoc, setDoc, getDoc,
-  serverTimestamp, query, where, orderBy, limit
+  serverTimestamp, query, where, orderBy, limit, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1431,14 +1431,35 @@ async function loadSalons() {
   }
 }
 
-loadSalons();
-
-// ===== REAL-TIME: تحديث كل 30 ثانية =====
-setInterval(() => {
-  if (document.getElementById('home-page').classList.contains('active')) {
-    loadSalons();
-  }
-}, 30000);
+// ===== REAL-TIME: onSnapshot بدل setInterval =====
+onSnapshot(collection(db, "salons"), (snap) => {
+  const firebaseSalons = snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      name: data.name || 'صالون',
+      city: data.city || '',
+      gender: data.gender || 'men',
+      available: data.available !== false,
+      rating: data.rating || 5.0,
+      reviews: data.reviews || 0,
+      services: data.services || [],
+      phone: data.phone || data.ownerPhone || '',
+      ownerPhone: data.phone || data.ownerPhone || '',
+      img: data.img || '',
+      openTime: data.openTime || '09:00',
+      closeTime: data.closeTime || '21:00',
+      desc: data.desc || '',
+      source: 'firebase'
+    };
+  });
+  const demoOnly = demoSalons.filter(d => !firebaseSalons.find(f => f.name === d.name));
+  allSalons = [...firebaseSalons, ...demoOnly];
+  renderSalons(filterByGender(allSalons, currentGender));
+}, () => {
+  allSalons = demoSalons;
+  renderSalons(filterByGender(allSalons, currentGender));
+});
 
 // ===== GENDER SWITCH =====
 window.switchGender = (gender) => {
@@ -1634,26 +1655,6 @@ window.confirmBooking = async () => {
   const confirmBtn = document.getElementById('confirm-btn-main');
   if (confirmBtn) confirmBtn.disabled = true;
 
-  // ===== فحص توفر الوقت قبل الدفع =====
-  try {
-    showToast('⏳ جاري التحقق من توفر الوقت...');
-    const slotCheck = await fetch('/api/check-slot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        salonId: selectedSalon.id,
-        date: date,
-        time: selectedTime
-      })
-    });
-    const slotData = await slotCheck.json();
-    if (!slotData.available) {
-      return showToast('❌ هذا الوقت محجوز — اختر وقتاً آخر');
-    }
-  } catch(e) {
-    console.log('slot check skipped:', e.message);
-  }
-
   const total = +(selectedService.price + 0.1).toFixed(1);
   const fullDateTime = `${date} ${selectedTime}`;
 
@@ -1678,103 +1679,43 @@ window.confirmBooking = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId })
           });
-        } catch(e) { console.log('approve endpoint not set'); }
+        } catch(e) {}
       },
       onReadyForServerCompletion: async (paymentId, txid) => {
         try {
-          await fetch('/api/complete', {
+          const res = await fetch('/api/create-booking', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid })
+            body: JSON.stringify({
+              paymentId,
+              txid,
+              salonId: selectedSalon.id,
+              serviceName: selectedService.name,
+              date,
+              time: selectedTime,
+              userId: currentUser.username
+            })
           });
-        } catch(e) { console.log('complete endpoint not set'); }
 
-        // توليد كود QR Check-In
-        const _ci = new Uint32Array(1); crypto.getRandomValues(_ci);
-        const checkInCode = (100000 + (_ci[0] % 900000)).toString();
+          const data = await res.json();
 
-        const bookingRef = await addDoc(collection(db, "bookings"), {
-          // أطراف الحجز
-          userId: currentUser.username,
-          user: currentUser.username,
-          salonId: selectedSalon.id,
-          salonName: selectedSalon.name,
-          salon: selectedSalon.name,
-          salonCity: selectedSalon.city,
-          city: selectedSalon.city,
-          salonPhone: selectedSalon.phone || selectedSalon.ownerPhone || '',
-
-          // تفاصيل الخدمة
-          serviceName: selectedService.name,
-          service: selectedService.name,
-          serviceDuration: selectedService.duration || 30,
-          servicePrice: selectedService.price,
-          gender: selectedSalon.gender,
-
-          // موعد
-          date: date,
-          time: selectedTime,
-          dateTime: fullDateTime,
-
-          // حالة الحجز
-          status: "pending",
-
-          // مالية — total هو المبلغ المدفوع فعلياً
-          servicePrice: selectedService.price,
-          commission: 0.1,
-          total: total,
-          depositPaid: total,
-          txid: txid,
-          paymentStatus: "paid",
-
-          // QR
-          checkInCode: checkInCode,
-          isReviewed: false,
-
-          createdAt: serverTimestamp()
-        });
-
-        // ===== إرسال إشعار WhatsApp لصاحب الصالون =====
-        if (selectedSalon.phone || selectedSalon.ownerPhone || selectedSalon.salonPhone) {
-          try {
-            await fetch('/api/notify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                ownerPhone: selectedSalon.phone || selectedSalon.ownerPhone || selectedSalon.salonPhone,
-                salonName: selectedSalon.name,
-                customerName: currentUser.username,
-                serviceName: selectedService.name,
-                dateTime: fullDateTime,
-                depositAmount: total,
-                bookingId: bookingRef.id,
-                type: 'new_booking'
-              })
-            });
-          } catch(e) {
-            console.log('WhatsApp notify failed:', e.message);
+          if (!res.ok) {
+            const msg = data.code === 'SLOT_TAKEN'
+              ? '❌ هذا الوقت محجوز — تم الدفع، تواصل مع الدعم'
+              : '❌ خطأ في إتمام الحجز، تواصل مع الدعم';
+            showToast(msg);
+            if (confirmBtn) confirmBtn.disabled = false;
+            return;
           }
+
+          closeModal('booking-modal');
+          showToast('✅ تم الحجز — ينتظر قبول الصالون');
+          switchPage('bookings-page', 'nav-bookings');
+          loadBookings();
+        } catch(e) {
+          showToast('❌ خطأ في الاتصال، تواصل مع الدعم');
+          if (confirmBtn) confirmBtn.disabled = false;
         }
-
-        // ===== حفظ الإشعار في Firebase أيضاً =====
-        try {
-          await addDoc(collection(db, "notifications"), {
-            to: selectedSalon.id,
-            type: 'new_booking',
-            title: 'حجز جديد',
-            body: `@${currentUser.username} حجز ${selectedService.name} في ${fullDateTime}`,
-            bookingId: bookingRef.id,
-            salonId: selectedSalon.id,
-            isRead: false,
-            whatsappSent: !!(selectedSalon.phone),
-            createdAt: serverTimestamp()
-          });
-        } catch(e) {}
-
-        closeModal('booking-modal');
-        showToast(`✅ تم الحجز — ينتظر قبول الصالون`);
-        switchPage('bookings-page', 'nav-bookings');
-        loadBookings();
       },
       onCancel: () => {
         showToast('تم إلغاء الدفع');
