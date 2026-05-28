@@ -116,12 +116,18 @@ window.confirmBooking = async () => {
     await Pi.createPayment(paymentData, {
       onReadyForServerApproval: async (paymentId) => {
         try {
-          await fetch('/api/approve', {
+          const r = await fetch('/api/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId })
           });
-        } catch(e) {}
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            showToast(`⚠️ فشل الموافقة على الدفع (${r.status}): ${d.error || ''}`);
+          }
+        } catch(e) {
+          showToast('⚠️ خطأ في الاتصال أثناء الموافقة على الدفع');
+        }
       },
       onReadyForServerCompletion: async (paymentId, txid) => {
         try {
@@ -159,12 +165,13 @@ window.confirmBooking = async () => {
           if (confirmBtn) confirmBtn.disabled = false;
         }
       },
-      onCancel: () => {
+      onCancel: (payment, error) => {
         showToast('تم إلغاء الدفع');
         if (confirmBtn) confirmBtn.disabled = false;
       },
-      onError: () => {
-        showToast('خطأ في الدفع، حاول مرة أخرى');
+      onError: (error, payment) => {
+        console.error('Pi payment error:', error, payment);
+        showToast(`❌ خطأ Pi: ${error?.message || JSON.stringify(error) || 'غير معروف'}`);
         if (confirmBtn) confirmBtn.disabled = false;
       }
     });
