@@ -2357,32 +2357,29 @@ window.cancelBooking = async (bookingId, dateTime, amount) => {
 // ===== PI AUTH =====
 window.initPi = async () => {
   try {
-    await Pi.init({ version: "2.0", sandbox: true });
+    await Pi.init({ version: "2.0", sandbox: false });
     console.log('✅ Pi SDK initialized');
     const auth = await Pi.authenticate(['username', 'payments'], {
       onIncompletePaymentFound: async (payment) => {
-        // دفع معلق من جلسة سابقة — نكمله تلقائياً
-        console.log('🔄 دفع معلق وُجد:', payment.identifier);
+        console.log('🔄 دفع معلق وُجد:', payment.identifier, '| txid:', payment.transaction?.txid);
         try {
-          // حاول إكماله أولاً
-          const res = await fetch('/api/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentId: payment.identifier,
-              txid: payment.transaction?.txid || 'pending'
-            })
-          });
-          const data = await res.json();
-          if (data.success) {
+          const txid = payment.transaction?.txid;
+          if (txid) {
+            // المعاملة على الـ blockchain اكتملت لكن السيرفر لم يُكملها
+            await fetch('/api/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier, txid })
+            });
             console.log('✅ تم إكمال الدفع المعلق');
           } else {
-            // إذا فشل الإكمال، أرسله للـ approve أولاً
+            // الدفع لم يصل للـ blockchain بعد — نوافق عليه فقط
             await fetch('/api/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId: payment.identifier })
             });
+            console.log('✅ تمت الموافقة على الدفع المعلق');
           }
         } catch(e) {
           console.log('تعذر معالجة الدفع المعلق:', e.message);
