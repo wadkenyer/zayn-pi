@@ -1,11 +1,22 @@
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis }     from '@upstash/redis';
+
 // Shared security utilities for all API endpoints
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://zaynpiddbdfaeb4520.pinet.com').split(',').map(o => o.trim());
 
-// In-memory rate limiter (per serverless instance)
-const rateLimitMap = new Map();
-const RATE_LIMIT = 20;       // max requests
-const RATE_WINDOW = 60_000;  // per 1 minute
+// Distributed rate limiter via Upstash Redis (works across all serverless instances)
+let _ratelimit = null;
+function getRatelimit() {
+  if (_ratelimit) return _ratelimit;
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) return null;
+  _ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(20, '60 s'),
+    analytics: false,
+  });
+  return _ratelimit;
+}
 
 export function setCors(req, res) {
   const origin = req.headers['origin'] || '';
@@ -24,29 +35,18 @@ export function setCors(req, res) {
   return isAllowed;
 }
 
-export function checkRateLimit(req) {
+export async function checkRateLimit(req) {
+  const rl = getRatelimit();
+
+  // If Upstash is not configured yet, allow all requests (fail open)
+  if (!rl) return true;
+
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
     || req.socket?.remoteAddress
     || 'unknown';
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip) || { count: 0, start: now };
 
-  if (now - entry.start > RATE_WINDOW) {
-    entry.count = 1;
-    entry.start = now;
-  } else {
-    entry.count++;
-  }
-  rateLimitMap.set(ip, entry);
-
-  // Prune old entries
-  if (rateLimitMap.size > 2000) {
-    for (const [key, val] of rateLimitMap) {
-      if (now - val.start > RATE_WINDOW) rateLimitMap.delete(key);
-    }
-  }
-
-  return entry.count <= RATE_LIMIT;
+  const { success } = await rl.limit(ip);
+  return success;
 }
 
 // Strip HTML/script-injectable chars and cap length
