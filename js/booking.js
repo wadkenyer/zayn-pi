@@ -9,7 +9,7 @@ export function generateTimeSlots(isWomen, openTime, closeTime) {
   const endH   = parseHour(closeTime) || 21;
 
   for (let h = startH; h <= endH; h++) {
-    const timeStr = `${h}:00`;
+    const timeStr = `${String(h).padStart(2, '0')}:00`;
     const btn = document.createElement('button');
     btn.className = 'time-btn';
     btn.textContent = timeStr;

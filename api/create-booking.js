@@ -31,12 +31,15 @@ export default async function handler(req, res) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
     return res.status(400).json({ error: 'تنسيق التاريخ غير صالح' });
   }
-  if (!/^\d{2}:\d{2}$/.test(cleanTime)) {
+  if (!/^\d{1,2}:\d{2}$/.test(cleanTime)) {
     return res.status(400).json({ error: 'تنسيق الوقت غير صالح' });
   }
 
   const PI_API_KEY = process.env.PI_API_KEY;
-  if (!PI_API_KEY) return res.status(500).json({ error: 'Server misconfiguration' });
+  if (!PI_API_KEY) {
+    console.error('create-booking: PI_API_KEY not set');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
 
   try {
     // ── 1. إتمام دفعة Pi والحصول على المبلغ الفعلي ──────────────────────────
@@ -50,7 +53,9 @@ export default async function handler(req, res) {
     );
 
     if (!piRes.ok) {
-      return res.status(400).json({ error: 'فشل إتمام الدفع' });
+      const piErrText = await piRes.text().catch(() => '');
+      console.error(`create-booking: Pi complete failed status=${piRes.status} body=${piErrText}`);
+      return res.status(400).json({ error: 'فشل إتمام الدفع', piStatus: piRes.status });
     }
 
     const piPayment = await piRes.json();
