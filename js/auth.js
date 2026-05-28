@@ -6,12 +6,10 @@ window.initPi = async () => {
   try {
     await Pi.init({ version: "2.0", sandbox: true });
 
-    const auth = await Pi.authenticate(['username', 'payments'], {
-      onIncompletePaymentFound: async (payment) => {
-        // Goal: clear the pending payment so new payments are unblocked.
-        // Do NOT attempt full booking recovery here — it has too many
-        // failure modes (missing metadata, slot conflicts, price changes).
-        // Just call Pi's complete/approve to resolve the pending state.
+    const auth = await Pi.authenticate(
+      ['username', 'payments'],
+      async (payment) => {
+        // onIncompletePaymentFound: clear pending payment to unblock new ones
         try {
           const txid = payment.transaction?.txid;
           if (txid) {
@@ -29,7 +27,7 @@ window.initPi = async () => {
           }
         } catch(e) {}
       }
-    });
+    );
 
     state.currentUser = auth.user;
 
