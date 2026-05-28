@@ -1,27 +1,37 @@
-// api/check-slot.js
-// المهمة: منع حجز نفس الوقت مرتين في نفس الصالون
-// بسيط وفعّال — بدون تعقيد غير ضروري
+import { setCors, checkRateLimit, sanitize } from './_lib.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { salonId, date, time } = req.body;
+  if (!checkRateLimit(req)) {
+    return res.status(429).json({ error: 'Too many requests' });
+  }
 
-  if (!salonId || !date || !time) {
+  const { salonId, date, time } = req.body || {};
+
+  const cleanSalonId = sanitize(salonId, 100);
+  const cleanDate    = sanitize(date, 20);
+  const cleanTime    = sanitize(time, 10);
+
+  if (!cleanSalonId || !cleanDate || !cleanTime) {
     return res.status(400).json({ error: 'salonId و date و time مطلوبة' });
   }
 
-  const PI_API_KEY = process.env.PI_API_KEY;
+  // Validate date format (YYYY-MM-DD)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+    return res.status(400).json({ error: 'تنسيق التاريخ غير صالح' });
+  }
+
+  // Validate time format (HH:MM)
+  if (!/^\d{2}:\d{2}$/.test(cleanTime)) {
+    return res.status(400).json({ error: 'تنسيق الوقت غير صالح' });
+  }
 
   try {
-    // نتحقق من Firebase REST API مباشرة
     const projectId = 'zayn-pi';
-    const dateTime = `${date} ${time}`;
-
+    const dateTime = `${cleanDate} ${cleanTime}`;
     const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
 
     const query = {
@@ -31,27 +41,9 @@ export default async function handler(req, res) {
           compositeFilter: {
             op: 'AND',
             filters: [
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'salonId' },
-                  op: 'EQUAL',
-                  value: { stringValue: salonId }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'dateTime' },
-                  op: 'EQUAL',
-                  value: { stringValue: dateTime }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'status' },
-                  op: 'NOT_EQUAL',
-                  value: { stringValue: 'cancelled' }
-                }
-              }
+              { fieldFilter: { field: { fieldPath: 'salonId' },  op: 'EQUAL',     value: { stringValue: cleanSalonId } } },
+              { fieldFilter: { field: { fieldPath: 'dateTime' }, op: 'EQUAL',     value: { stringValue: dateTime } } },
+              { fieldFilter: { field: { fieldPath: 'status' },   op: 'NOT_EQUAL', value: { stringValue: 'cancelled' } } }
             ]
           }
         },
@@ -66,8 +58,6 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
-    // إذا وُجد حجز = الوقت محجوز
     const isBooked = Array.isArray(data) && data.length > 0 && data[0].document;
 
     return res.status(200).json({
@@ -76,8 +66,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('check-slot error:', error.message);
-    // في حال الخطأ نسمح بالحجز ونتحقق لاحقاً
     return res.status(200).json({ available: true, message: 'تحقق جزئي' });
   }
 }

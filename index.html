@@ -1690,7 +1690,8 @@ window.confirmBooking = async () => {
         } catch(e) { console.log('complete endpoint not set'); }
 
         // توليد كود QR Check-In
-        const checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const _ci = new Uint32Array(1); crypto.getRandomValues(_ci);
+        const checkInCode = (100000 + (_ci[0] % 900000)).toString();
 
         const bookingRef = await addDoc(collection(db, "bookings"), {
           // أطراف الحجز
@@ -1832,7 +1833,8 @@ async function loadBookings() {
       // إذا لم يكن للحجز كود — أنشئ واحداً واحفظه تلقائياً
       let checkInCode = b.checkInCode;
       if (!checkInCode && showCode) {
-        checkInCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const _ci2 = new Uint32Array(1); crypto.getRandomValues(_ci2);
+        checkInCode = (100000 + (_ci2[0] % 900000)).toString();
         try {
           await updateDoc(doc(db, "bookings", docId), { checkInCode });
         } catch(e) {}

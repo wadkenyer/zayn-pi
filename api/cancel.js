@@ -1,66 +1,57 @@
-// api/cancel.js
-// المهمة: إلغاء الحجز + معالجة استرداد الـ Pi حسب وقت الإلغاء
+import { setCors, checkRateLimit, sanitize } from './_lib.js';
 
 export default async function handler(req, res) {
-
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method Not Allowed' });
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+  if (!checkRateLimit(req)) {
+    return res.status(429).json({ success: false, error: 'Too many requests' });
   }
 
-  const { bookingId, user, bookingDateTime, amount } = req.body;
-  const parsedAmount = parseFloat(amount) || 0;
+  const { bookingId, user, bookingDateTime, amount } = req.body || {};
 
-  // التحقق من البيانات المطلوبة
-  if (!bookingId || !user || !bookingDateTime) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'bookingId و user و bookingDateTime مطلوبة' 
-    });
+  const cleanBookingId = sanitize(bookingId, 100);
+  const cleanUser = sanitize(user, 100);
+
+  if (!cleanBookingId || !cleanUser || !bookingDateTime) {
+    return res.status(400).json({ success: false, error: 'bookingId و user و bookingDateTime مطلوبة' });
+  }
+
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount < 0 || parsedAmount > 10000) {
+    return res.status(400).json({ success: false, error: 'amount غير صالح' });
+  }
+
+  const bookingTime = new Date(bookingDateTime);
+  if (isNaN(bookingTime.getTime())) {
+    return res.status(400).json({ success: false, error: 'bookingDateTime غير صالح' });
   }
 
   try {
-    // ===== حساب وقت الإلغاء =====
     const now = new Date();
-    const bookingTime = new Date(bookingDateTime);
     const hoursUntilBooking = (bookingTime - now) / (1000 * 60 * 60);
 
-    let refundPolicy;
-    let refundAmount;
-    let refundPercentage;
+    let refundPolicy, refundAmount, refundPercentage;
 
     if (hoursUntilBooking >= 24) {
-      // إلغاء قبل 24 ساعة أو أكثر → استرداد كامل
       refundPercentage = 100;
       refundAmount = parsedAmount;
       refundPolicy = 'full_refund';
     } else if (hoursUntilBooking >= 2) {
-      // إلغاء بين 2 و 24 ساعة → استرداد 50%
       refundPercentage = 50;
       refundAmount = parsedAmount * 0.5;
       refundPolicy = 'partial_refund';
     } else {
-      // إلغاء أقل من ساعتين → لا استرداد
       refundPercentage = 0;
       refundAmount = 0;
       refundPolicy = 'no_refund';
     }
 
-    // ===== تسجيل الإلغاء في Firebase (عبر Admin SDK) =====
-    // ملاحظة: التحديث الفعلي في Firebase يتم من التطبيق
-    // هذا الـ endpoint يحسب السياسة ويرد بها
-
-    console.log(`🚫 Cancel request: booking=${bookingId} | user=${user} | hours=${hoursUntilBooking.toFixed(1)} | policy=${refundPolicy}`);
-
     return res.status(200).json({
       success: true,
-      bookingId,
-      user,
+      bookingId: cleanBookingId,
+      user: cleanUser,
       hoursUntilBooking: hoursUntilBooking.toFixed(1),
       refundPolicy,
       refundPercentage,
@@ -69,20 +60,15 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Cancel error:', error.message);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 }
 
 function getRefundMessage(policy, amount, percentage) {
   switch (policy) {
-    case 'full_refund':
-      return `✅ سيتم استرداد ${amount} Pi كاملاً خلال 24 ساعة`;
-    case 'partial_refund':
-      return `⚠️ سيتم استرداد ${percentage}% فقط (${amount} Pi) لأن الإلغاء أقل من 24 ساعة`;
-    case 'no_refund':
-      return `❌ لا يمكن الاسترداد — الإلغاء أقل من ساعتين من الموعد`;
-    default:
-      return 'تم معالجة الإلغاء';
+    case 'full_refund':    return `✅ سيتم استرداد ${amount} Pi كاملاً خلال 24 ساعة`;
+    case 'partial_refund': return `⚠️ سيتم استرداد ${percentage}% فقط (${amount} Pi) لأن الإلغاء أقل من 24 ساعة`;
+    case 'no_refund':      return `❌ لا يمكن الاسترداد — الإلغاء أقل من ساعتين من الموعد`;
+    default:               return 'تم معالجة الإلغاء';
   }
 }
