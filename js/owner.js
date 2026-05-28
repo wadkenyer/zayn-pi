@@ -42,18 +42,32 @@ async function loadOwnerDashboard() {
     if (state.ownerSalonData.openTime)  document.getElementById('edit-open-time').value  = state.ownerSalonData.openTime;
     if (state.ownerSalonData.closeTime) document.getElementById('edit-close-time').value = state.ownerSalonData.closeTime;
 
+    const toggle = document.getElementById('avail-toggle');
+    const label  = document.getElementById('avail-label');
+    if (state.salonAvailable) { toggle.classList.add('on');    label.textContent = '🟢 متاح الآن'; }
+    else                      { toggle.classList.remove('on'); label.textContent = '🔴 مشغول الآن'; }
+
+    renderOwnerServices();
+
+    // Load bookings via server API (bypasses Firestore security rules + index requirements)
+    const apiRes = await fetch('/api/owner-bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: state.currentUser.username })
+    });
+
+    if (!apiRes.ok) {
+      console.error('owner-bookings API error:', await apiRes.text().catch(() => ''));
+      return;
+    }
+
+    const { pending, recent, stats } = await apiRes.json();
+
     // Pending bookings
-    const pendingSnap = await getDocs(query(
-      collection(db, "bookings"),
-      where("salonId", "==", state.currentUser.username),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
-    ));
-    let pendingCount = 0, pendingHtml = '';
-    pendingSnap.forEach(d => {
-      const b = d.data(); pendingCount++;
+    let pendingHtml = '';
+    (pending || []).forEach(b => {
       pendingHtml += `
-        <div class="pending-booking-item" id="pending-${d.id}">
+        <div class="pending-booking-item" id="pending-${b.id}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
               <div style="font-weight:900;font-size:15px;">@${b.userId || b.user}</div>
@@ -61,34 +75,34 @@ async function loadOwnerDashboard() {
                 ✂️ ${b.serviceName || b.service || 'خدمة'} · ${b.dateTime || ''}
               </div>
               <div style="font-size:12px;color:var(--teal);margin-top:2px;">
-                💰 عربون: ${b.depositPaid || 0.3} Pi
+                💰 عربون: ${b.depositPaid || b.total || 0} Pi
               </div>
             </div>
             <span class="status-badge status-pending">⏳ انتظار</span>
           </div>
           <div class="pending-actions">
-            <button class="accept-btn" onclick="acceptBooking('${d.id}','${b.userId||b.user}','${b.serviceName||b.service||''}','${b.dateTime||''}','')">✅ قبول</button>
-            <button class="reject-btn" onclick="rejectBooking('${d.id}')">❌ رفض</button>
+            <button class="accept-btn" onclick="acceptBooking('${b.id}','${(b.userId||b.user||'').replace(/'/g,"\\'")}','${(b.serviceName||b.service||'').replace(/'/g,"\\'")}','${(b.dateTime||'').replace(/'/g,"\\'")}','')">✅ قبول</button>
+            <button class="reject-btn" onclick="rejectBooking('${b.id}')">❌ رفض</button>
           </div>
         </div>`;
     });
+
     const pendingEl = document.getElementById('owner-pending-list');
     if (pendingEl) pendingEl.innerHTML = pendingHtml ||
       `<div style="text-align:center;color:var(--gray);padding:16px 0;font-size:13px;">✓ لا توجد حجوزات معلقة</div>`;
 
-    // All bookings stats
-    const bSnap = await getDocs(query(
-      collection(db, "bookings"),
-      where("salonId", "==", state.currentUser.username),
-      orderBy("createdAt", "desc"),
-      limit(10)
-    ));
-    let revenue = 0, todayCount = 0, completedCount = 0, recentHtml = '';
-    const today = new Date().toISOString().split('T')[0];
-    bSnap.forEach(d => {
-      const b = d.data();
-      if (b.status === 'completed') { revenue += b.servicePrice || 0; completedCount++; }
-      if (b.dateTime && b.dateTime.startsWith(today)) todayCount++;
+    // Stats
+    const { revenue = 0, todayCount = 0, completedCount = 0, pendingCount = 0 } = stats || {};
+    document.getElementById('owner-revenue').textContent     = Number(revenue).toFixed(1);
+    document.getElementById('owner-revenue-sub').textContent = `↑ ${completedCount} حجوزات مكتملة`;
+    document.getElementById('owner-today').textContent       = todayCount;
+    document.getElementById('owner-pending').textContent     = pendingCount;
+    document.getElementById('owner-commission').innerHTML    =
+      `${(completedCount * 0.1).toFixed(1)} <span style="font-size:12px;color:var(--teal);">Pi</span>`;
+
+    // Recent bookings
+    let recentHtml = '';
+    (recent || []).forEach(b => {
       recentHtml += `
         <div class="recent-booking-item">
           <div>
@@ -108,26 +122,12 @@ async function loadOwnerDashboard() {
         </div>`;
     });
 
-    document.getElementById('owner-revenue').textContent     = revenue.toFixed(1);
-    document.getElementById('owner-revenue-sub').textContent = `↑ ${completedCount} حجوزات مكتملة`;
-    document.getElementById('owner-today').textContent       = todayCount;
-    document.getElementById('owner-pending').textContent     = pendingCount;
-    document.getElementById('owner-commission').innerHTML    =
-      `${(completedCount * 0.1).toFixed(1)} <span style="font-size:12px;color:var(--teal);">Pi</span>`;
-
-    const toggle = document.getElementById('avail-toggle');
-    const label  = document.getElementById('avail-label');
-    if (state.salonAvailable) { toggle.classList.add('on');    label.textContent = '🟢 متاح الآن'; }
-    else                      { toggle.classList.remove('on'); label.textContent = '🔴 مشغول الآن'; }
-
-    renderOwnerServices();
-
     const recentEl = document.getElementById('owner-recent-bookings') || document.getElementById('owner-recent-list');
     if (recentEl) recentEl.innerHTML = recentHtml ||
       `<div class="empty-state" style="padding:20px 0;"><i class="fas fa-inbox"></i><p>لا حجوزات بعد</p></div>`;
 
   } catch(e) {
-    console.error(e);
+    console.error('loadOwnerDashboard error:', e);
   }
 }
 
@@ -209,17 +209,14 @@ window.registerSalon = async () => {
   }
 };
 
-window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhone) => {
+window.acceptBooking = async (bookingId) => {
   try {
-    await updateDoc(doc(db, "bookings", bookingId), { status: 'accepted', acceptedAt: serverTimestamp() });
-    if (userPhone) {
-      try {
-        await fetch('/api/notify', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ownerPhone: userPhone, salonName: state.ownerSalonData?.name || 'الصالون', customerName: userId, serviceName, dateTime, type: 'accepted' })
-        });
-      } catch(e) {}
-    }
+    const res = await fetch('/api/owner-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'accept', bookingId, username: state.currentUser.username })
+    });
+    if (!res.ok) { showToast('خطأ في القبول'); return; }
     showToast('✅ تم قبول الحجز');
     loadOwnerDashboard();
   } catch(e) { showToast('خطأ في القبول'); }
@@ -228,9 +225,12 @@ window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhon
 window.rejectBooking = async (bookingId) => {
   const reason = prompt('سبب الرفض (اختياري):') || 'ظرف طارئ';
   try {
-    await updateDoc(doc(db, "bookings", bookingId), {
-      status: 'rejected', cancelReason: reason, cancelledBy: 'owner', cancelledAt: serverTimestamp()
+    const res = await fetch('/api/owner-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reject', bookingId, username: state.currentUser.username, reason })
     });
+    if (!res.ok) { showToast('خطأ في الرفض'); return; }
     showToast('تم رفض الحجز');
     loadOwnerDashboard();
   } catch(e) { showToast('خطأ'); }
@@ -240,21 +240,15 @@ window.verifyCheckIn = async () => {
   const code = document.getElementById('qr-input-field').value.trim();
   if (!/^\d{6}$/.test(code)) return showToast('الكود يجب أن يكون 6 أرقام فقط');
   try {
-    const snap = await getDocs(query(
-      collection(db, "bookings"),
-      where("salonId", "==", state.currentUser.username),
-      where("checkInCode", "==", code)
-    ));
-    if (snap.empty) return showToast('❌ كود غير صحيح');
-    const bookingDoc = snap.docs[0];
-    const b = bookingDoc.data();
-    if (b.status === 'cancelled' || b.status === 'rejected') return showToast('❌ هذا الحجز ملغي أو مرفوض');
-    if (b.status === 'checkedin') return showToast(`⚠️ تم تسجيل حضور @${b.userId || b.user} مسبقاً`);
-    await updateDoc(doc(db, "bookings", bookingDoc.id), {
-      status: 'checkedin', acceptedAt: b.acceptedAt || serverTimestamp(), checkedInAt: serverTimestamp()
+    const res = await fetch('/api/owner-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'checkin', code, bookingId: '_', username: state.currentUser.username })
     });
+    const data = await res.json();
+    if (!res.ok) { showToast(`❌ ${data.error || 'خطأ في التحقق'}`); return; }
     document.getElementById('qr-input-field').value = '';
-    showToast(`✅ تم تسجيل حضور @${b.userId || b.user} — ${b.serviceName || b.service}`);
+    showToast(`✅ تم تسجيل حضور @${data.user} — ${data.service}`);
     loadOwnerDashboard();
   } catch(e) { showToast('خطأ في التحقق'); }
 };
