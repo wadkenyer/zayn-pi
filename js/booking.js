@@ -108,7 +108,8 @@ window.confirmBooking = async () => {
         salonId:    state.selectedSalon.id,
         service:    state.selectedService.name,
         dateTime:   fullDateTime,
-        commission: 0.1
+        commission: 0.1,
+        userId:     state.currentUser.username
       }
     };
 
