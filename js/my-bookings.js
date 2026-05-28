@@ -1,5 +1,5 @@
 import state from './state.js';
-import { db, collection, doc, getDocs, updateDoc, query, where, orderBy } from './firebase.js';
+import { db, doc, updateDoc } from './firebase.js';
 import { showToast } from './ui.js';
 
 async function loadBookings() {
@@ -11,23 +11,30 @@ async function loadBookings() {
   list.innerHTML = `<div class="spinner"><i class="fas fa-circle-notch fa-spin"></i></div>`;
 
   try {
-    const q = query(
-      collection(db, "bookings"),
-      where("user", "==", state.currentUser.username),
-      orderBy("createdAt", "desc")
-    );
-    const snap = await getDocs(q);
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: state.currentUser.username })
+    });
 
-    if (snap.empty) {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('loadBookings API error:', err);
+      list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>خطأ في التحميل (${res.status})</p></div>`;
+      return;
+    }
+
+    const { bookings } = await res.json();
+
+    if (!bookings || bookings.length === 0) {
       list.innerHTML = `<div class="empty-state"><i class="fas fa-calendar-times"></i><p>لا توجد حجوزات بعد</p></div>`;
       return;
     }
 
     let totalPi = 0, count = 0, html = '';
 
-    for (const docSnap of snap.docs) {
-      const b      = docSnap.data();
-      const docId  = docSnap.id;
+    for (const b of bookings) {
+      const docId = b.id;
       count++;
       totalPi += b.servicePrice || 0;
 
@@ -58,8 +65,8 @@ async function loadBookings() {
                           b.status === 'completed'  ? 'مكتمل ✓'   :
                           isRejected                ? 'مرفوض ✗'   : 'قيد الانتظار ⏳';
 
-      const statusClass = (isCancelled || isRejected)                                  ? 'status-cancelled' :
-                          (b.status === 'accepted' || b.status === 'completed' || b.status === 'checkedin') ? 'status-confirmed' :
+      const statusClass = (isCancelled || isRejected)                                                          ? 'status-cancelled' :
+                          (b.status === 'accepted' || b.status === 'completed' || b.status === 'checkedin')    ? 'status-confirmed' :
                           'status-pending';
 
       html += `
@@ -114,7 +121,8 @@ async function loadBookings() {
       remaining === 10 ? '🎉 تهانينا! تم ربح 0.5 Pi' : `${remaining} حجوزات متبقية للحصول على 0.5 Pi`;
 
   } catch(e) {
-    list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>خطأ في التحميل</p></div>`;
+    console.error('loadBookings error:', e);
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>خطأ في الاتصال بالخادم</p></div>`;
   }
 }
 
