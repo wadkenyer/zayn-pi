@@ -1,4 +1,4 @@
-import { setCors, checkRateLimit, sanitize } from './_lib.js';
+import { setCors, checkRateLimit, sanitize, verifyPiToken } from './_lib.js';
 import { getDb } from './_firebase.js';
 
 export default async function handler(req, res) {
@@ -8,6 +8,12 @@ export default async function handler(req, res) {
 
   if (!(await checkRateLimit(req))) {
     return res.status(429).json({ error: 'Too many requests' });
+  }
+
+  // Require authenticated Pi user — slot data is only for logged-in users who can book
+  const verifiedUser = await verifyPiToken(req);
+  if (!verifiedUser) {
+    return res.status(401).json({ error: 'غير مصرح — يلزم تسجيل الدخول بـ Pi' });
   }
 
   const { salonId, date, time } = req.body || {};
