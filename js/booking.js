@@ -1,4 +1,4 @@
-import state from './state.js';
+import state, { apiHeaders } from './state.js';
 import { showToast, openModal, closeModal, switchPage } from './ui.js';
 
 export function generateTimeSlots(isWomen, openTime, closeTime) {
@@ -118,7 +118,7 @@ window.confirmBooking = async () => {
         try {
           const r = await fetch('/api/approve', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: apiHeaders(),
             body: JSON.stringify({ paymentId })
           });
           if (!r.ok) {
@@ -133,7 +133,7 @@ window.confirmBooking = async () => {
         try {
           const res = await fetch('/api/create-booking', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: apiHeaders(),
             body: JSON.stringify({
               paymentId,
               txid,

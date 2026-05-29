@@ -1,4 +1,4 @@
-import state from './state.js';
+import state, { apiHeaders } from './state.js';
 import { db, collection, doc, getDocs, updateDoc, setDoc, getDoc, serverTimestamp, query, where, orderBy, limit } from './firebase.js';
 import { showToast, openModal, closeModal, switchPage } from './ui.js';
 
@@ -50,10 +50,11 @@ async function loadOwnerDashboard() {
     renderOwnerServices();
 
     // Load bookings via server API (bypasses Firestore security rules + index requirements)
+    // VULN-03 fix: salonId is derived server-side from the Bearer token
     const apiRes = await fetch('/api/owner-bookings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: state.currentUser.username })
+      headers: apiHeaders(),
+      body: JSON.stringify({})
     });
 
     if (!apiRes.ok) {
@@ -213,8 +214,8 @@ window.acceptBooking = async (bookingId) => {
   try {
     const res = await fetch('/api/owner-action', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'accept', bookingId, username: state.currentUser.username })
+      headers: apiHeaders(),
+      body: JSON.stringify({ action: 'accept', bookingId })
     });
     if (!res.ok) { showToast('خطأ في القبول'); return; }
     showToast('✅ تم قبول الحجز');
@@ -227,8 +228,8 @@ window.rejectBooking = async (bookingId) => {
   try {
     const res = await fetch('/api/owner-action', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'reject', bookingId, username: state.currentUser.username, reason })
+      headers: apiHeaders(),
+      body: JSON.stringify({ action: 'reject', bookingId, reason })
     });
     if (!res.ok) { showToast('خطأ في الرفض'); return; }
     showToast('تم رفض الحجز');
@@ -242,8 +243,8 @@ window.verifyCheckIn = async () => {
   try {
     const res = await fetch('/api/owner-action', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkin', code, bookingId: '_', username: state.currentUser.username })
+      headers: apiHeaders(),
+      body: JSON.stringify({ action: 'checkin', code, bookingId: '_' })
     });
     const data = await res.json();
     if (!res.ok) { showToast(`❌ ${data.error || 'خطأ في التحقق'}`); return; }

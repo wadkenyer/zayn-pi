@@ -1,4 +1,4 @@
-import { setCors, checkRateLimit, sanitize, isValidPhone } from './_lib.js';
+import { setCors, checkRateLimit, sanitize, isValidPhone, isInternalCall } from './_lib.js';
 
 const ALLOWED_TYPES = ['new_booking', 'cancelled', 'reminder', 'accepted'];
 
@@ -6,6 +6,11 @@ export default async function handler(req, res) {
   setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+
+  // VULN-12 fix: only allow calls from within the platform (create-booking, etc.)
+  if (!isInternalCall(req)) {
+    return res.status(403).json({ error: 'غير مصرح' });
+  }
 
   if (!(await checkRateLimit(req))) {
     return res.status(429).json({ error: 'Too many requests' });

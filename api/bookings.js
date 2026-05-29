@@ -1,4 +1,4 @@
-import { setCors, checkRateLimit, sanitize } from './_lib.js';
+import { setCors, checkRateLimit, verifyPiToken } from './_lib.js';
 import { getDb } from './_firebase.js';
 
 export default async function handler(req, res) {
@@ -10,16 +10,16 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests' });
   }
 
-  const { username } = req.body || {};
-  const cleanUsername = sanitize(username, 100);
-  if (!cleanUsername) {
-    return res.status(400).json({ error: 'username مطلوب' });
+  // VULN-01/02 fix: derive username from verified Pi token, never from request body
+  const username = await verifyPiToken(req);
+  if (!username) {
+    return res.status(401).json({ error: 'غير مصرح — يلزم تسجيل الدخول بـ Pi' });
   }
 
   try {
     const db = getDb();
     const snap = await db.collection('bookings')
-      .where('user', '==', cleanUsername)
+      .where('user', '==', username)
       .get();
 
     const bookings = snap.docs
@@ -36,6 +36,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, bookings });
   } catch (err) {
     console.error('bookings fetch error:', err.message);
-    return res.status(500).json({ error: 'Server error', detail: err.message });
+    // VULN-18 fix: never expose internal error details to the client
+    return res.status(500).json({ error: 'Server error' });
   }
 }

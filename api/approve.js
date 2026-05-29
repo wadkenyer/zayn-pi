@@ -1,4 +1,4 @@
-import { setCors, checkRateLimit } from './_lib.js';
+import { setCors, checkRateLimit, verifyPiToken } from './_lib.js';
 
 export default async function handler(req, res) {
   setCors(req, res);
@@ -7,6 +7,12 @@ export default async function handler(req, res) {
 
   if (!(await checkRateLimit(req))) {
     return res.status(429).json({ success: false, error: 'Too many requests' });
+  }
+
+  // VULN-01/04 fix: verify Pi token before approving any payment
+  const verifiedUser = await verifyPiToken(req);
+  if (!verifiedUser) {
+    return res.status(401).json({ success: false, error: 'غير مصرح' });
   }
 
   const { paymentId } = req.body || {};

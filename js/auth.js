@@ -30,6 +30,7 @@ window.initPi = async () => {
     );
 
     state.currentUser = auth.user;
+    state.accessToken = auth.accessToken; // used in Authorization header for all API calls
 
     const badge = `<div class="user-badge"><i class="fas fa-circle" style="color:var(--gold);font-size:8px"></i> ${state.currentUser.username}</div>`;
     document.getElementById('auth-area').innerHTML = badge;

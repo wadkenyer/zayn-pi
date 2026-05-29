@@ -1,6 +1,6 @@
 import { randomInt } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { setCors, checkRateLimit, sanitize, isValidPhone } from './_lib.js';
+import { setCors, checkRateLimit, sanitize, isValidPhone, verifyPiToken } from './_lib.js';
 import { getDb } from './_firebase.js';
 
 const COMMISSION = 0.1;
@@ -15,7 +15,14 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests' });
   }
 
-  const { paymentId, txid, salonId, serviceName, date, time, userId } = req.body || {};
+  // VULN-01 fix: verify Pi token and derive userId from it
+  const verifiedUserId = await verifyPiToken(req);
+  if (!verifiedUserId) {
+    return res.status(401).json({ error: 'غير مصرح — يلزم تسجيل الدخول بـ Pi' });
+  }
+
+  const { paymentId, txid, salonId, serviceName, date, time } = req.body || {};
+  // userId is derived from verified token, never trusted from request body
 
   const cleanPaymentId   = sanitize(paymentId, 100);
   const cleanTxid        = sanitize(txid, 200);
@@ -23,9 +30,9 @@ export default async function handler(req, res) {
   const cleanServiceName = sanitize(serviceName, 100);
   const cleanDate        = sanitize(date, 20);
   const cleanTime        = sanitize(time, 10);
-  const cleanUserId      = sanitize(userId, 100);
+  const cleanUserId      = verifiedUserId; // always from token
 
-  if (!cleanPaymentId || !cleanTxid || !cleanSalonId || !cleanServiceName || !cleanDate || !cleanTime || !cleanUserId) {
+  if (!cleanPaymentId || !cleanTxid || !cleanSalonId || !cleanServiceName || !cleanDate || !cleanTime) {
     return res.status(400).json({ error: 'بيانات ناقصة' });
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
@@ -42,6 +49,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ── 0. VULN-05 fix: reject duplicate paymentId to prevent replay attacks ─
+    const db = getDb();
+    const dupSnap = await db.collection('bookings')
+      .where('paymentId', '==', cleanPaymentId)
+      .limit(1)
+      .get();
+    if (!dupSnap.empty) {
+      return res.status(409).json({ error: 'هذه الدفعة مستخدمة مسبقاً', code: 'PAYMENT_USED' });
+    }
+
     // ── 1. إتمام دفعة Pi والحصول على المبلغ الفعلي ──────────────────────────
     const piRes = await fetch(
       `https://api.minepi.com/v2/payments/${encodeURIComponent(cleanPaymentId)}/complete`,
@@ -62,7 +79,6 @@ export default async function handler(req, res) {
     const paidAmount = Number(piPayment.amount);
 
     // ── 2. جلب بيانات الصالون والتحقق من سعر الخدمة ──────────────────────────
-    const db = getDb();
     const salonSnap = await db.collection('salons').doc(cleanSalonId).get();
 
     if (!salonSnap.exists) {
@@ -153,7 +169,10 @@ export default async function handler(req, res) {
     if (ownerPhone && isValidPhone(ownerPhone)) {
       fetch(`${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : ''}/api/notify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-secret': process.env.INTERNAL_API_SECRET || '',
+        },
         body: JSON.stringify({
           ownerPhone,
           salonName: salon.name,

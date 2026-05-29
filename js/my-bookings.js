@@ -1,4 +1,4 @@
-import state from './state.js';
+import state, { apiHeaders } from './state.js';
 import { db, doc, updateDoc } from './firebase.js';
 import { showToast } from './ui.js';
 
@@ -11,10 +11,11 @@ async function loadBookings() {
   list.innerHTML = `<div class="spinner"><i class="fas fa-circle-notch fa-spin"></i></div>`;
 
   try {
+    // VULN-02 fix: username is now derived server-side from the Bearer token
     const res = await fetch('/api/bookings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: state.currentUser.username })
+      headers: apiHeaders(),
+      body: JSON.stringify({})
     });
 
     if (!res.ok) {
@@ -96,7 +97,7 @@ async function loadBookings() {
             TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
           </div>
           ${canCancel ? `
-          <button onclick="cancelBooking('${docId}','${b.dateTime}',${b.total || b.amount})"
+          <button onclick="cancelBooking('${docId}')"
             style="margin-top:12px;width:100%;padding:10px;border:2px solid #ef4444;border-radius:12px;
             background:transparent;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">
             إلغاء الحجز
@@ -126,25 +127,28 @@ async function loadBookings() {
   }
 }
 
-window.cancelBooking = async (bookingId, dateTime, amount) => {
+window.cancelBooking = async (bookingId) => {
   try {
-    const res = await fetch('/api/cancel', {
+    // Step 1: get refund policy (no write yet)
+    const previewRes = await fetch('/api/cancel', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingId, user: state.currentUser.username, bookingDateTime: dateTime, amount })
+      headers: apiHeaders(),
+      body: JSON.stringify({ bookingId, confirm: false })
     });
-    const data = await res.json();
-    if (!data.success) return showToast('خطأ في الإلغاء');
+    const preview = await previewRes.json();
+    if (!previewRes.ok || !preview.success) return showToast(preview.error || 'خطأ في الإلغاء');
 
-    const confirmed = confirm(`${data.message}\n\nهل تريد المتابعة؟`);
+    const confirmed = confirm(`${preview.message}\n\nهل تريد المتابعة؟`);
     if (!confirmed) return;
 
-    await updateDoc(doc(db, "bookings", bookingId), {
-      status: 'cancelled',
-      cancelledAt: new Date().toISOString(),
-      refundPolicy: data.refundPolicy,
-      refundAmount: parseFloat(data.refundAmount)
+    // Step 2: confirm cancellation server-side (VULN-06 fix: no client-side Firestore write)
+    const confirmRes = await fetch('/api/cancel', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ bookingId, confirm: true })
     });
+    const data = await confirmRes.json();
+    if (!confirmRes.ok || !data.success) return showToast(data.error || 'خطأ في الإلغاء');
 
     showToast(data.refundPolicy === 'no_refund'
       ? '🚫 تم الإلغاء — لا استرداد'
@@ -155,8 +159,8 @@ window.cancelBooking = async (bookingId, dateTime, amount) => {
     if (card) {
       card.style.opacity = '0.5';
       card.querySelector('button') && (card.querySelector('button').style.display = 'none');
-      card.querySelector('.booking-status').textContent  = 'ملغي ✗';
-      card.querySelector('.booking-status').className    = 'booking-status status-cancelled';
+      card.querySelector('.booking-status').textContent = 'ملغي ✗';
+      card.querySelector('.booking-status').className   = 'booking-status status-cancelled';
     }
   } catch(e) {
     showToast('خطأ — تحقق من الاتصال');

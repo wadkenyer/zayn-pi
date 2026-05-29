@@ -1,4 +1,6 @@
-import { setCors, checkRateLimit, sanitize } from './_lib.js';
+import { FieldValue } from 'firebase-admin/firestore';
+import { setCors, checkRateLimit, sanitize, verifyPiToken } from './_lib.js';
+import { getDb } from './_firebase.js';
 
 export default async function handler(req, res) {
   setCors(req, res);
@@ -9,57 +11,82 @@ export default async function handler(req, res) {
     return res.status(429).json({ success: false, error: 'Too many requests' });
   }
 
-  const { bookingId, user, bookingDateTime, amount } = req.body || {};
+  // VULN-01/06 fix: verify Pi token — user identity comes from token, not body
+  const verifiedUser = await verifyPiToken(req);
+  if (!verifiedUser) {
+    return res.status(401).json({ success: false, error: 'غير مصرح' });
+  }
 
+  const { bookingId, confirm } = req.body || {};
   const cleanBookingId = sanitize(bookingId, 100);
-  const cleanUser = sanitize(user, 100);
 
-  if (!cleanBookingId || !cleanUser || !bookingDateTime) {
-    return res.status(400).json({ success: false, error: 'bookingId و user و bookingDateTime مطلوبة' });
-  }
-
-  const parsedAmount = parseFloat(amount);
-  if (isNaN(parsedAmount) || parsedAmount < 0 || parsedAmount > 10000) {
-    return res.status(400).json({ success: false, error: 'amount غير صالح' });
-  }
-
-  const bookingTime = new Date(bookingDateTime);
-  if (isNaN(bookingTime.getTime())) {
-    return res.status(400).json({ success: false, error: 'bookingDateTime غير صالح' });
+  if (!cleanBookingId) {
+    return res.status(400).json({ success: false, error: 'bookingId مطلوب' });
   }
 
   try {
+    const db = getDb();
+    const bookingSnap = await db.collection('bookings').doc(cleanBookingId).get();
+
+    if (!bookingSnap.exists) {
+      return res.status(404).json({ success: false, error: 'الحجز غير موجود' });
+    }
+
+    const booking = bookingSnap.data();
+
+    // VULN-06 fix: verify the requesting user owns this booking
+    if (booking.user !== verifiedUser && booking.userId !== verifiedUser) {
+      return res.status(403).json({ success: false, error: 'غير مصرح' });
+    }
+
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ success: false, error: 'الحجز ملغي مسبقاً' });
+    }
+
+    const bookingTime = new Date(booking.dateTime);
+    if (isNaN(bookingTime.getTime())) {
+      return res.status(400).json({ success: false, error: 'تاريخ الحجز غير صالح' });
+    }
+
     const now = new Date();
     const hoursUntilBooking = (bookingTime - now) / (1000 * 60 * 60);
 
     let refundPolicy, refundAmount, refundPercentage;
+    const paidAmount = parseFloat(booking.total || booking.depositPaid || 0);
 
     if (hoursUntilBooking >= 24) {
-      refundPercentage = 100;
-      refundAmount = parsedAmount;
-      refundPolicy = 'full_refund';
+      refundPercentage = 100; refundAmount = paidAmount; refundPolicy = 'full_refund';
     } else if (hoursUntilBooking >= 2) {
-      refundPercentage = 50;
-      refundAmount = parsedAmount * 0.5;
-      refundPolicy = 'partial_refund';
+      refundPercentage = 50; refundAmount = paidAmount * 0.5; refundPolicy = 'partial_refund';
     } else {
-      refundPercentage = 0;
-      refundAmount = 0;
-      refundPolicy = 'no_refund';
+      refundPercentage = 0; refundAmount = 0; refundPolicy = 'no_refund';
+    }
+
+    const message = getRefundMessage(refundPolicy, refundAmount.toFixed(2), refundPercentage);
+
+    // If confirm=true, perform the actual cancellation server-side
+    if (confirm === true) {
+      await bookingSnap.ref.update({
+        status: 'cancelled',
+        cancelledAt: FieldValue.serverTimestamp(),
+        refundPolicy,
+        refundAmount: parseFloat(refundAmount.toFixed(2)),
+      });
     }
 
     return res.status(200).json({
       success: true,
       bookingId: cleanBookingId,
-      user: cleanUser,
       hoursUntilBooking: hoursUntilBooking.toFixed(1),
       refundPolicy,
       refundPercentage,
       refundAmount: refundAmount.toFixed(2),
-      message: getRefundMessage(refundPolicy, refundAmount, refundPercentage)
+      message,
+      cancelled: confirm === true,
     });
 
   } catch (error) {
+    console.error('cancel error:', error.message);
     return res.status(500).json({ success: false, error: 'Server error' });
   }
 }

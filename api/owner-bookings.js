@@ -1,4 +1,4 @@
-import { setCors, checkRateLimit, sanitize } from './_lib.js';
+import { setCors, checkRateLimit, verifyPiToken } from './_lib.js';
 import { getDb } from './_firebase.js';
 
 export default async function handler(req, res) {
@@ -10,14 +10,15 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too many requests' });
   }
 
-  const { username } = req.body || {};
-  const salonId = sanitize(username, 100);
-  if (!salonId) return res.status(400).json({ error: 'username مطلوب' });
+  // VULN-01/03 fix: derive salonId from verified Pi token — never from request body
+  const salonId = await verifyPiToken(req);
+  if (!salonId) {
+    return res.status(401).json({ error: 'غير مصرح — يلزم تسجيل الدخول بـ Pi' });
+  }
 
   try {
     const db = getDb();
 
-    // Pending bookings — no composite index needed (no orderBy)
     const pendingSnap = await db.collection('bookings')
       .where('salonId', '==', salonId)
       .where('status', '==', 'pending')
@@ -27,7 +28,6 @@ export default async function handler(req, res) {
       .map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate?.()?.toISOString() || null }))
       .sort((a, b) => (b.createdAt || '') > (a.createdAt || '') ? 1 : -1);
 
-    // Recent bookings for stats (all statuses)
     const recentSnap = await db.collection('bookings')
       .where('salonId', '==', salonId)
       .get();
@@ -53,6 +53,7 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('owner-bookings error:', err.message);
-    return res.status(500).json({ error: 'Server error', detail: err.message });
+    // VULN-18 fix: never expose internal error details
+    return res.status(500).json({ error: 'Server error' });
   }
 }

@@ -1,4 +1,5 @@
 import { setCors, checkRateLimit, sanitize } from './_lib.js';
+import { getDb } from './_firebase.js';
 
 export default async function handler(req, res) {
   setCors(req, res);
@@ -19,53 +20,29 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'salonId و date و time مطلوبة' });
   }
 
-  // Validate date format (YYYY-MM-DD)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
     return res.status(400).json({ error: 'تنسيق التاريخ غير صالح' });
   }
 
-  // Validate time format (HH:MM)
-  if (!/^\d{2}:\d{2}$/.test(cleanTime)) {
+  if (!/^\d{1,2}:\d{2}$/.test(cleanTime)) {
     return res.status(400).json({ error: 'تنسيق الوقت غير صالح' });
   }
 
   try {
-    const projectId = 'zayn-pi';
-    const dateTime = `${cleanDate} ${cleanTime}`;
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
-
-    const query = {
-      structuredQuery: {
-        from: [{ collectionId: 'bookings' }],
-        where: {
-          compositeFilter: {
-            op: 'AND',
-            filters: [
-              { fieldFilter: { field: { fieldPath: 'salonId' },  op: 'EQUAL',     value: { stringValue: cleanSalonId } } },
-              { fieldFilter: { field: { fieldPath: 'dateTime' }, op: 'EQUAL',     value: { stringValue: dateTime } } },
-              { fieldFilter: { field: { fieldPath: 'status' },   op: 'NOT_EQUAL', value: { stringValue: 'cancelled' } } }
-            ]
-          }
-        },
-        limit: 1
-      }
-    };
-
-    const response = await fetch(firestoreUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    });
-
-    const data = await response.json();
-    const isBooked = Array.isArray(data) && data.length > 0 && data[0].document;
+    // VULN-10 fix: use Admin SDK instead of unauthenticated Firestore REST API
+    // VULN-19 fix: fail closed — return available:false on error
+    const db = getDb();
+    const slotId = `${cleanSalonId}_${cleanDate}_${cleanTime.replace(':', '-')}`;
+    const slotSnap = await db.collection('slot_locks').doc(slotId).get();
 
     return res.status(200).json({
-      available: !isBooked,
-      message: isBooked ? 'هذا الوقت محجوز مسبقاً' : 'الوقت متاح'
+      available: !slotSnap.exists,
+      message: slotSnap.exists ? 'هذا الوقت محجوز مسبقاً' : 'الوقت متاح'
     });
 
   } catch (error) {
-    return res.status(200).json({ available: true, message: 'تحقق جزئي' });
+    console.error('check-slot error:', error.message);
+    // VULN-19 fix: fail closed — treat errors as "not available" to be safe
+    return res.status(200).json({ available: false, message: 'تعذّر التحقق' });
   }
 }
