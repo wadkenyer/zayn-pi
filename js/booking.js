@@ -1,5 +1,5 @@
 import state, { apiHeaders } from './state.js';
-import { showToast, openModal, closeModal, switchPage } from './ui.js';
+import { showToast, openModal, closeModal, switchPage, escapeHtml } from './ui.js';
 
 export function generateTimeSlots(isWomen, openTime, closeTime) {
   const container = document.getElementById('time-slots');
@@ -56,10 +56,10 @@ window.openBookingModal = (salonOrId) => {
   svcsEl.innerHTML = salon.services.map((sv, i) => `
     <div class="service-option" id="svc-opt-${i}" onclick="selectService(${i})">
       <div>
-        <div class="service-name">${sv.name}</div>
-        <div class="service-duration"><i class="fas fa-clock"></i> ${sv.duration} دقيقة</div>
+        <div class="service-name">${escapeHtml(sv.name)}</div>
+        <div class="service-duration"><i class="fas fa-clock"></i> ${Number(sv.duration)} دقيقة</div>
       </div>
-      <div class="service-price ${isWomen ? 'service-price-women' : ''}">${sv.price} Pi</div>
+      <div class="service-price ${isWomen ? 'service-price-women' : ''}">${Number(sv.price)} Pi</div>
     </div>
   `).join('');
 

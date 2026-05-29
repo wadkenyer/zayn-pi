@@ -1,3 +1,13 @@
+// VULN-09 fix: HTML-escape user-controlled data before injecting into innerHTML
+export function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -28,10 +38,11 @@ export function switchPage(pageId, navId) {
 }
 
 // Expose to inline onclick handlers
-window.openModal  = openModal;
-window.closeModal = closeModal;
-window.switchPage = switchPage;
-window.showToast  = showToast;
+window.openModal   = openModal;
+window.closeModal  = closeModal;
+window.switchPage  = switchPage;
+window.showToast   = showToast;
+window.escapeHtml  = escapeHtml;
 
 // Close modals on overlay click
 document.addEventListener('DOMContentLoaded', () => {

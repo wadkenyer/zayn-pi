@@ -1,6 +1,6 @@
 import { db, collection, onSnapshot } from './firebase.js';
 import state from './state.js';
-import { showToast } from './ui.js';
+import { showToast, escapeHtml } from './ui.js';
 
 export const demoSalons = [
   {
@@ -84,7 +84,7 @@ export function renderSalons(salons) {
   container.innerHTML = salons.map(s => `
     <div class="salon-card">
       <div class="salon-img-wrap">
-        <img src="${s.img}" class="salon-img" alt="${s.name}" onerror="this.src='https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=600'">
+        <img src="${escapeHtml(s.img)}" class="salon-img" alt="${escapeHtml(s.name)}" onerror="this.src='https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=600'">
         <span class="availability-badge ${s.available ? 'available' : 'busy'}">
           ${s.available ? '🟢 متاح' : '🔴 مشغول'}
         </span>
@@ -93,16 +93,16 @@ export function renderSalons(salons) {
         </span>
       </div>
       <div class="salon-body">
-        <div class="salon-name">${s.name}</div>
+        <div class="salon-name">${escapeHtml(s.name)}</div>
         <div class="salon-meta">
-          <span><i class="fas fa-map-marker-alt" style="color:var(--teal)"></i> ${s.city}</span>
-          <span class="rating">★ ${s.rating}</span>
-          <span style="color:var(--gray)">(${s.reviews} تقييم)</span>
+          <span><i class="fas fa-map-marker-alt" style="color:var(--teal)"></i> ${escapeHtml(s.city)}</span>
+          <span class="rating">★ ${Number(s.rating).toFixed(1)}</span>
+          <span style="color:var(--gray)">(${Number(s.reviews)} تقييم)</span>
         </div>
-        ${s.openTime ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;"><i class="fas fa-clock" style="color:var(--teal)"></i> ${s.openTime} - ${s.closeTime}</div>` : ''}
-        ${s.desc ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;font-style:italic;">${s.desc}</div>` : ''}
+        ${s.openTime ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;"><i class="fas fa-clock" style="color:var(--teal)"></i> ${escapeHtml(s.openTime)} - ${escapeHtml(s.closeTime)}</div>` : ''}
+        ${s.desc ? `<div style="font-size:12px;color:var(--gray);margin-bottom:8px;font-style:italic;">${escapeHtml(s.desc)}</div>` : ''}
         <div class="services-preview">
-          ${s.services.slice(0,3).map(sv => `<span class="service-tag ${isWomen ? 'service-tag-women' : ''}">${sv.name}</span>`).join('')}
+          ${s.services.slice(0,3).map(sv => `<span class="service-tag ${isWomen ? 'service-tag-women' : ''}">${escapeHtml(sv.name)}</span>`).join('')}
           ${s.services.length > 3 ? `<span class="service-tag" style="background:#f0f0f0;color:#888">+${s.services.length-3}</span>` : ''}
         </div>
         <div class="salon-footer">
@@ -110,7 +110,7 @@ export function renderSalons(salons) {
             من <strong>${s.services.length ? Math.min(...s.services.map(sv => sv.price)) : '—'} Pi</strong>
           </div>
           <button
-            onclick="openBookingModal('${s.id}')"
+            onclick="openBookingModal('${escapeHtml(s.id)}')"
             class="book-btn ${isWomen ? 'book-btn-women' : ''}"
             ${!s.available ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}
           >

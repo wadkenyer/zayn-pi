@@ -1,4 +1,4 @@
-import { db, doc, updateDoc, getDoc, serverTimestamp } from './firebase.js';
+import { apiHeaders } from './state.js';
 import { showToast, openModal, closeModal } from './ui.js';
 
 let _reviewBookingId = null;
@@ -27,27 +27,18 @@ window.selectStar = (val) => {
   document.getElementById('star-label').textContent = starLabels[val] || '';
 };
 
+// VULN-07 fix: submit review via authenticated server endpoint
 window.submitReview = async () => {
   if (!_selectedStars) return showToast('اختر عدد النجوم أولاً');
   const comment = document.getElementById('review-comment').value.trim();
   try {
-    await updateDoc(doc(db, "bookings", _reviewBookingId), {
-      isReviewed: true, reviewStars: _selectedStars, reviewComment: comment, reviewedAt: serverTimestamp()
+    const res = await fetch('/api/review', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ bookingId: _reviewBookingId, stars: _selectedStars, comment })
     });
-
-    if (_reviewSalonId) {
-      try {
-        const salonRef  = doc(db, "salons", _reviewSalonId);
-        const salonSnap = await getDoc(salonRef);
-        if (salonSnap.exists()) {
-          const d          = salonSnap.data();
-          const oldReviews = d.reviews || 0;
-          const newReviews = oldReviews + 1;
-          const newRating  = parseFloat(((( d.rating || 5.0) * oldReviews + _selectedStars) / newReviews).toFixed(1));
-          await updateDoc(salonRef, { rating: newRating, reviews: newReviews });
-        }
-      } catch(e) {}
-    }
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'خطأ في إرسال التقييم'); return; }
 
     closeModal('review-modal');
     showToast('✅ شكراً! تم إرسال تقييمك');

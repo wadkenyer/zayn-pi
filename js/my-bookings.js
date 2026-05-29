@@ -1,6 +1,5 @@
 import state, { apiHeaders } from './state.js';
-import { db, doc, updateDoc } from './firebase.js';
-import { showToast } from './ui.js';
+import { showToast, escapeHtml } from './ui.js';
 
 async function loadBookings() {
   const list = document.getElementById('my-bookings-list');
@@ -46,12 +45,8 @@ async function loadBookings() {
       const canCancel   = !isCancelled && !isRejected && hoursLeft > 0;
       const showCode    = !isCancelled && !isRejected && b.status !== 'checkedin';
 
-      let checkInCode = b.checkInCode;
-      if (!checkInCode && showCode) {
-        const arr = new Uint32Array(1); crypto.getRandomValues(arr);
-        checkInCode = String(100000 + (arr[0] % 900000));
-        try { await updateDoc(doc(db, "bookings", docId), { checkInCode }); } catch(e) {}
-      }
+      // VULN-21 fix: checkInCode is always generated server-side in create-booking
+      const checkInCode = b.checkInCode;
 
       let refundHint = '';
       if (canCancel) {
@@ -70,40 +65,48 @@ async function loadBookings() {
                           (b.status === 'accepted' || b.status === 'completed' || b.status === 'checkedin')    ? 'status-confirmed' :
                           'status-pending';
 
+      const safeDocId  = escapeHtml(docId);
+      const safeSalon  = escapeHtml(b.salon || b.salonName || '—');
+      const safeService = escapeHtml(b.service || b.serviceName || 'خدمة');
+      const safeCity   = escapeHtml(b.city || b.salonCity || '—');
+      const safeDate   = escapeHtml(b.dateTime || b.date || 'غير محدد');
+      const safeTxid   = escapeHtml(b.txid ? b.txid.substring(0, 16) : 'sandbox');
+      const safeSalonId = escapeHtml(b.salonId || '');
+
       html += `
-        <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${docId}">
+        <div class="booking-card ${isWomen ? 'booking-card-women' : ''}" id="booking-${safeDocId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <div style="font-weight:900;font-size:16px;">${b.salon || b.salonName || '—'}</div>
+              <div style="font-weight:900;font-size:16px;">${safeSalon}</div>
               <div style="color:var(--gray);font-size:13px;margin-top:2px;">
-                <i class="fas fa-scissors"></i> ${b.service || b.serviceName || 'خدمة'} · ${b.city || b.salonCity || '—'}
+                <i class="fas fa-scissors"></i> ${safeService} · ${safeCity}
               </div>
             </div>
             <span class="booking-status ${statusClass}">${statusLabel}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
             <div style="color:var(--teal);font-weight:700;font-size:14px;">
-              <i class="fas fa-calendar"></i> ${b.dateTime || b.date || 'غير محدد'}
+              <i class="fas fa-calendar"></i> ${safeDate}
             </div>
-            <div style="font-weight:900;font-size:16px;">${b.total || b.amount || 0} Pi</div>
+            <div style="font-weight:900;font-size:16px;">${Number(b.total || b.amount || 0)} Pi</div>
           </div>
           ${refundHint ? `<div style="font-size:12px;color:var(--gray);margin-top:6px;">${refundHint}</div>` : ''}
           ${showCode && checkInCode ? `
           <div style="margin-top:12px;background:linear-gradient(135deg,var(--dark),#1a2f42);border-radius:14px;padding:16px;text-align:center;">
             <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-bottom:8px;">🔑 كود الحضور — أعطه لصاحب الصالون عند وصولك</div>
-            <div style="font-size:36px;font-weight:900;color:var(--teal);letter-spacing:10px;line-height:1;">${checkInCode}</div>
+            <div style="font-size:36px;font-weight:900;color:var(--teal);letter-spacing:10px;line-height:1;">${escapeHtml(checkInCode)}</div>
           </div>` : ''}
           <div style="font-size:11px;color:#bbb;margin-top:8px;">
-            TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
+            TX: ${safeTxid}...
           </div>
           ${canCancel ? `
-          <button onclick="cancelBooking('${docId}')"
+          <button onclick="cancelBooking('${safeDocId}')"
             style="margin-top:12px;width:100%;padding:10px;border:2px solid #ef4444;border-radius:12px;
             background:transparent;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">
             إلغاء الحجز
           </button>` : ''}
           ${(b.status === 'checkedin' || b.status === 'completed') && !b.isReviewed ? `
-          <button class="review-btn" onclick="openReviewModal('${docId}','${(b.salon||b.salonName||'').replace(/'/g,"\\'")}','${(b.service||b.serviceName||'').replace(/'/g,"\\'")}','${b.salonId||''}')">
+          <button class="review-btn" onclick="openReviewModal('${safeDocId}','${safeSalon.replace(/'/g,"\\'")}','${safeService.replace(/'/g,"\\'")}','${safeSalonId}')">
             ⭐ قيّم تجربتك
           </button>` : ''}
           ${b.isReviewed ? `<div class="review-done">✅ شكراً على تقييمك!</div>` : ''}

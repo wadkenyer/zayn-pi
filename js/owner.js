@@ -1,6 +1,6 @@
 import state, { apiHeaders } from './state.js';
-import { db, collection, doc, getDocs, updateDoc, setDoc, getDoc, serverTimestamp, query, where, orderBy, limit } from './firebase.js';
-import { showToast, openModal, closeModal, switchPage } from './ui.js';
+import { db, doc, getDoc } from './firebase.js';
+import { showToast, openModal, closeModal, switchPage, escapeHtml } from './ui.js';
 
 function renderOwnerServices() {
   const el = document.getElementById('owner-services-list');
@@ -11,10 +11,10 @@ function renderOwnerServices() {
   el.innerHTML = state.ownerServices.map((sv, i) => `
     <div class="service-manage-card">
       <div class="service-manage-info">
-        <div class="service-manage-name">${sv.name}</div>
-        <div class="service-manage-details"><i class="fas fa-clock"></i> ${sv.duration} دقيقة</div>
+        <div class="service-manage-name">${escapeHtml(sv.name)}</div>
+        <div class="service-manage-details"><i class="fas fa-clock"></i> ${Number(sv.duration)} دقيقة</div>
       </div>
-      <div class="service-manage-price">${sv.price} Pi</div>
+      <div class="service-manage-price">${Number(sv.price)} Pi</div>
       <button onclick="deleteService(${i})" class="delete-service-btn">
         <i class="fas fa-trash"></i>
       </button>
@@ -50,7 +50,6 @@ async function loadOwnerDashboard() {
     renderOwnerServices();
 
     // Load bookings via server API (bypasses Firestore security rules + index requirements)
-    // VULN-03 fix: salonId is derived server-side from the Bearer token
     const apiRes = await fetch('/api/owner-bookings', {
       method: 'POST',
       headers: apiHeaders(),
@@ -67,23 +66,28 @@ async function loadOwnerDashboard() {
     // Pending bookings
     let pendingHtml = '';
     (pending || []).forEach(b => {
+      const safeId      = escapeHtml(b.id);
+      const safeUser    = escapeHtml(b.userId || b.user);
+      const safeService = escapeHtml(b.serviceName || b.service || 'خدمة');
+      const safeDate    = escapeHtml(b.dateTime || '');
+      const safeDeposit = Number(b.depositPaid || b.total || 0);
       pendingHtml += `
-        <div class="pending-booking-item" id="pending-${b.id}">
+        <div class="pending-booking-item" id="pending-${safeId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <div style="font-weight:900;font-size:15px;">@${b.userId || b.user}</div>
+              <div style="font-weight:900;font-size:15px;">@${safeUser}</div>
               <div style="font-size:13px;color:var(--gray);margin-top:2px;">
-                ✂️ ${b.serviceName || b.service || 'خدمة'} · ${b.dateTime || ''}
+                ✂️ ${safeService} · ${safeDate}
               </div>
               <div style="font-size:12px;color:var(--teal);margin-top:2px;">
-                💰 عربون: ${b.depositPaid || b.total || 0} Pi
+                💰 عربون: ${safeDeposit} Pi
               </div>
             </div>
             <span class="status-badge status-pending">⏳ انتظار</span>
           </div>
           <div class="pending-actions">
-            <button class="accept-btn" onclick="acceptBooking('${b.id}','${(b.userId||b.user||'').replace(/'/g,"\\'")}','${(b.serviceName||b.service||'').replace(/'/g,"\\'")}','${(b.dateTime||'').replace(/'/g,"\\'")}','')">✅ قبول</button>
-            <button class="reject-btn" onclick="rejectBooking('${b.id}')">❌ رفض</button>
+            <button class="accept-btn" onclick="acceptBooking('${safeId}')">✅ قبول</button>
+            <button class="reject-btn" onclick="rejectBooking('${safeId}')">❌ رفض</button>
           </div>
         </div>`;
     });
@@ -104,15 +108,18 @@ async function loadOwnerDashboard() {
     // Recent bookings
     let recentHtml = '';
     (recent || []).forEach(b => {
+      const safeUser    = escapeHtml(b.userId || b.user);
+      const safeService = escapeHtml(b.serviceName || b.service || 'خدمة');
+      const safeDate    = escapeHtml(b.dateTime || '');
       recentHtml += `
         <div class="recent-booking-item">
           <div>
-            <div class="rb-user">@${b.userId || b.user}</div>
-            <div class="rb-service">${b.serviceName || b.service || 'خدمة'}</div>
-            <div class="rb-time">${b.dateTime || ''}</div>
+            <div class="rb-user">@${safeUser}</div>
+            <div class="rb-service">${safeService}</div>
+            <div class="rb-time">${safeDate}</div>
           </div>
           <div style="text-align:left;">
-            <div class="rb-amount">${b.servicePrice || 0} Pi</div>
+            <div class="rb-amount">${Number(b.servicePrice || 0)} Pi</div>
             <span class="status-badge status-${b.status||'pending'}" style="font-size:10px;">${
               b.status === 'completed' ? '✓ مكتمل' :
               b.status === 'accepted'  ? '✓ مقبول' :
@@ -159,6 +166,7 @@ window.goToRegStep1 = () => {
   document.getElementById('step-dot-2').style.background = '#e0e0e0';
 };
 
+// VULN-08 fix: salon creation is now done server-side in /api/register-salon
 window.registerSalon = async () => {
   const name      = document.getElementById('reg-salon-name').value.trim();
   const city      = document.getElementById('reg-salon-city').value.trim();
@@ -168,10 +176,6 @@ window.registerSalon = async () => {
   const desc      = document.getElementById('reg-salon-desc').value.trim();
   const openTime  = document.getElementById('reg-open-time').value;
   const closeTime = document.getElementById('reg-close-time').value;
-  const defaultImg = gender === 'women'
-    ? 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600'
-    : 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600';
-  const img = imgInput || defaultImg;
 
   if (!name || !city) return showToast('أكمل بيانات الصالون');
 
@@ -180,26 +184,31 @@ window.registerSalon = async () => {
       { amount: 2, memo: `تسجيل صالون ${name} على ZAYN PI`, metadata: { type: 'salon_registration', salonName: name, city, gender } },
       {
         onReadyForServerApproval: async (paymentId) => {
-          try { await fetch('/api/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({paymentId}) }); } catch(e) {}
+          try { await fetch('/api/approve', { method: 'POST', headers: apiHeaders(), body: JSON.stringify({ paymentId }) }); } catch(e) {}
         },
         onReadyForServerCompletion: async (paymentId, txid) => {
-          try { await fetch('/api/complete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({paymentId, txid}) }); } catch(e) {}
+          try {
+            const res = await fetch('/api/register-salon', {
+              method: 'POST',
+              headers: apiHeaders(),
+              body: JSON.stringify({ paymentId, txid, name, city, gender, phone, img: imgInput, desc, openTime, closeTime })
+            });
+            const data = await res.json();
+            if (!res.ok) { showToast(data.error || 'خطأ في التسجيل'); return; }
 
-          await setDoc(doc(db, "salons", state.currentUser.username), {
-            name, city, gender, img, phone, desc, openTime, closeTime,
-            owner: state.currentUser.username,
-            available: true, rating: 5.0, reviews: 0, revenue: 0,
-            registrationTxid: txid, services: [], createdAt: serverTimestamp()
-          });
+            const defaultImg = gender === 'women'
+              ? 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600'
+              : 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600';
 
-          state.isOwner        = true;
-          state.ownerSalonData = { name, city, gender, img, phone, desc, openTime, closeTime, available: true, services: [], revenue: 0 };
-          state.ownerServices  = [];
+            state.isOwner        = true;
+            state.ownerSalonData = { name, city, gender, img: imgInput || defaultImg, phone, desc, openTime, closeTime, available: true, services: [], revenue: 0 };
+            state.ownerServices  = [];
 
-          closeModal('register-owner-modal');
-          showToast(`🎉 تم تسجيل ${name} بنجاح!`);
-          switchPage('owner-page', null);
-          loadOwnerDashboard();
+            closeModal('register-owner-modal');
+            showToast(`🎉 تم تسجيل ${name} بنجاح!`);
+            switchPage('owner-page', null);
+            loadOwnerDashboard();
+          } catch(e) { showToast('خطأ في إتمام التسجيل'); }
         },
         onCancel: () => showToast('تم إلغاء التسجيل'),
         onError:  () => showToast('خطأ في الدفع')
@@ -254,20 +263,32 @@ window.verifyCheckIn = async () => {
   } catch(e) { showToast('خطأ في التحقق'); }
 };
 
+// VULN-14 fix: all salon writes go through /api/salon-update
 window.toggleAvailability = async () => {
+  // Optimistic update
   state.salonAvailable = !state.salonAvailable;
   const toggle = document.getElementById('avail-toggle');
   const label  = document.getElementById('avail-label');
   if (state.salonAvailable) { toggle.classList.add('on');    label.textContent = '🟢 متاح الآن'; }
   else                      { toggle.classList.remove('on'); label.textContent = '🔴 مشغول الآن'; }
   try {
-    await updateDoc(doc(db, "salons", state.currentUser.username), { available: state.salonAvailable });
+    const res = await fetch('/api/salon-update', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ action: 'toggle_availability' })
+    });
+    if (!res.ok) throw new Error();
     showToast(state.salonAvailable ? 'الصالون الآن متاح ✓' : 'تم التحديث: مشغول الآن');
-  } catch(e) { showToast('تحقق من الاتصال'); }
+  } catch(e) {
+    // Revert on failure
+    state.salonAvailable = !state.salonAvailable;
+    if (state.salonAvailable) { toggle.classList.add('on');    label.textContent = '🟢 متاح الآن'; }
+    else                      { toggle.classList.remove('on'); label.textContent = '🔴 مشغول الآن'; }
+    showToast('تحقق من الاتصال');
+  }
 };
 
 window.updateSalonData = async () => {
-  const updates = {};
   const name      = document.getElementById('edit-salon-name').value.trim();
   const city      = document.getElementById('edit-salon-city').value.trim();
   const phone     = document.getElementById('edit-salon-phone').value.trim();
@@ -276,6 +297,7 @@ window.updateSalonData = async () => {
   const openTime  = document.getElementById('edit-open-time').value;
   const closeTime = document.getElementById('edit-close-time').value;
 
+  const updates = {};
   if (name)      updates.name      = name;
   if (city)      updates.city      = city;
   if (phone)     updates.phone     = phone;
@@ -286,7 +308,12 @@ window.updateSalonData = async () => {
 
   if (!Object.keys(updates).length) return showToast('لا يوجد تعديلات للحفظ');
   try {
-    await updateDoc(doc(db, "salons", state.currentUser.username), updates);
+    const res = await fetch('/api/salon-update', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ action: 'update_info', ...updates })
+    });
+    if (!res.ok) { showToast('خطأ في الحفظ'); return; }
     showToast('✅ تم حفظ التعديلات');
     state.ownerSalonData = { ...state.ownerSalonData, ...updates };
     if (updates.name) document.getElementById('owner-salon-name-header').textContent = updates.name;
@@ -305,9 +332,15 @@ window.saveService = async () => {
   const duration = parseInt(document.getElementById('svc-duration').value);
   const price    = parseFloat(document.getElementById('svc-price').value);
   if (!name || !duration || !price) return showToast('أكمل بيانات الخدمة');
-  state.ownerServices.push({ name, duration, price });
   try {
-    await updateDoc(doc(db, "salons", state.currentUser.username), { services: state.ownerServices });
+    const res = await fetch('/api/salon-update', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ action: 'add_service', name, duration, price })
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d.error || 'خطأ في الحفظ'); return; }
+    const data = await res.json();
+    state.ownerServices = data.services;
     closeModal('add-service-modal');
     renderOwnerServices();
     showToast('✓ تم إضافة الخدمة');
@@ -315,10 +348,16 @@ window.saveService = async () => {
 };
 
 window.deleteService = async (idx) => {
-  state.ownerServices.splice(idx, 1);
   try {
-    await updateDoc(doc(db, "salons", state.currentUser.username), { services: state.ownerServices });
+    const res = await fetch('/api/salon-update', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ action: 'delete_service', serviceIndex: idx })
+    });
+    if (!res.ok) { showToast('خطأ في الحذف'); return; }
+    const data = await res.json();
+    state.ownerServices = data.services;
     renderOwnerServices();
     showToast('تم حذف الخدمة');
-  } catch(e) {}
+  } catch(e) { showToast('خطأ'); }
 };
