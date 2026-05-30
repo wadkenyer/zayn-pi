@@ -4,7 +4,7 @@ import { showToast } from './ui.js';
 
 window.initPi = async () => {
   try {
-    await Pi.init({ version: "2.0", sandbox: true });
+    await Pi.init({ version: "2.0", sandbox: false });
 
     const auth = await Pi.authenticate(
       ['username', 'payments'],
