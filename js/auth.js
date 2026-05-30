@@ -5,7 +5,7 @@ import { showToast } from './ui.js';
 // Initialize Pi SDK once — modules run after DOM is ready so this is safe
 if (typeof Pi !== 'undefined') {
   try {
-    Pi.init({ version: "2.0", sandbox: false });
+    Pi.init({ version: "2.0", sandbox: true });
   } catch(e) {
     console.warn('Pi.init failed:', e);
   }
