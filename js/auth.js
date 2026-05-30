@@ -2,27 +2,23 @@ import state from './state.js';
 import { db, doc, getDoc } from './firebase.js';
 import { showToast } from './ui.js';
 
-// Initialize Pi SDK once — modules run after DOM is ready so this is safe
-if (typeof Pi !== 'undefined') {
-  try {
-    Pi.init({ version: "2.0", sandbox: true });
-  } catch(e) {
-    console.warn('Pi.init failed:', e);
-  }
-}
+let _piReady = false;
 
 window.initPi = async () => {
-  // Pi SDK not available — app is not running inside Pi Browser
   if (typeof Pi === 'undefined') {
     showToast('يرجى فتح التطبيق داخل Pi Browser');
     return;
   }
 
   try {
+    if (!_piReady) {
+      await Pi.init({ version: "2.0", sandbox: true });
+      _piReady = true;
+    }
+
     const auth = await Pi.authenticate(
       ['username', 'payments'],
       async (payment) => {
-        // onIncompletePaymentFound: clear pending payment to unblock new ones
         try {
           const txid = payment.transaction?.txid;
           if (txid) {
@@ -64,9 +60,7 @@ window.initPi = async () => {
     if (window.loadBookings) window.loadBookings();
 
   } catch(e) {
-    console.error('Pi.authenticate error:', e);
-    // Show the real error to help diagnose in Pi Browser console
-    const msg = e?.message || e?.toString() || 'unknown error';
-    showToast(`خطأ في تسجيل الدخول: ${msg}`);
+    console.error('Pi auth error:', e);
+    showToast(`خطأ: ${e?.message || String(e)}`);
   }
 };
