@@ -3,16 +3,6 @@ import { db, doc, getDoc } from './firebase.js';
 import { showToast } from './ui.js';
 
 window.initPi = async () => {
-  // DIAGNOSTIC — remove after debugging
-  const diag = {
-    'window.Pi':        typeof window.Pi,
-    'window.pi':        typeof window.pi,
-    'window.PiNative':  typeof window.PiNative,
-    'Pi.constructor':   typeof window.Pi === 'object' ? window.Pi?.constructor?.name : 'n/a'
-  };
-  console.log('Pi Bridge Diagnostic:', diag);
-  alert('Pi Diagnostic:\n' + Object.entries(diag).map(([k,v]) => `${k} = ${v}`).join('\n'));
-
   try {
     await Pi.init({ version: "2.0", sandbox: true });
 
