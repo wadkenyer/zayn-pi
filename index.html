@@ -882,6 +882,22 @@
 </head>
 <body>
 
+<!-- ===== SPLASH SCREEN ===== -->
+<div id="splash-screen" style="
+  position:fixed;inset:0;z-index:99999;
+  background:linear-gradient(135deg,#0F1923 0%,#0d2233 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+">
+  <div style="font-size:48px;font-weight:900;color:#fff;font-family:'Cairo',sans-serif;letter-spacing:-1px;">
+    ZAYN <span style="color:#0ABFA3;">PI</span>
+  </div>
+  <div id="splash-msg" style="color:rgba(255,255,255,0.6);font-family:'Cairo',sans-serif;font-size:14px;">
+    جاري الاتصال بـ Pi Network...
+  </div>
+  <div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.15);border-top-color:#0ABFA3;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
+
 <!-- ===== HOME PAGE ===== -->
 <div id="home-page" class="page active">
   <div class="app-header">
@@ -2448,10 +2464,12 @@ window.initPi = async () => {
       }
     } catch(e) {}
 
+    hideSplash();
     showToast(`مرحباً ${currentUser.username}!`);
     loadBookings();
   } catch(e) {
     console.error('initPi error:', e);
+    hideSplash();
     if (loginBtn) {
       loginBtn.disabled = false;
       loginBtn.innerHTML = '<i class="fas fa-circle" style="color:#F5C842;font-size:8px"></i> دخول بـ Pi';
@@ -2461,6 +2479,7 @@ window.initPi = async () => {
     } else {
       showToast('خطأ في الاتصال — اضغط للمحاولة مجدداً');
     }
+    throw e;
   }
 };
 
@@ -2584,17 +2603,65 @@ window.showToast = (msg) => {
 };
 
 // ===== AUTO INIT على تحميل الصفحة =====
-document.addEventListener('DOMContentLoaded', () => {
-  // تشغيل تلقائي فقط داخل Pi Browser
-  if (window.Pi) {
-    initPi();
-  } else {
-    // انتظر تحميل Pi SDK ثم شغّل
-    const sdkScript = document.querySelector('script[src*="minepi"]');
-    if (sdkScript) {
-      sdkScript.addEventListener('load', () => {
-        if (window.Pi) initPi();
-      });
+function hideSplash() {
+  const splash = document.getElementById('splash-screen');
+  if (splash) {
+    splash.style.opacity = '0';
+    splash.style.transition = 'opacity 0.4s ease';
+    setTimeout(() => splash.remove(), 400);
+  }
+}
+
+function setSplashMsg(msg) {
+  const el = document.getElementById('splash-msg');
+  if (el) el.textContent = msg;
+}
+
+function waitForPiSDK(timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    if (window.Pi && typeof window.Pi.init === 'function') {
+      return resolve();
+    }
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (window.Pi && typeof window.Pi.init === 'function') {
+        clearInterval(interval);
+        resolve();
+      } else if (Date.now() - start > timeout) {
+        clearInterval(interval);
+        reject(new Error('Pi SDK timeout'));
+      }
+    }, 100);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    setSplashMsg('جاري تحميل Pi SDK...');
+    await waitForPiSDK(8000);
+    setSplashMsg('جاري الاتصال بـ Pi Network...');
+    await initPi();
+  } catch(e) {
+    console.error('Auto-init failed:', e.message);
+    if (e.message === 'Pi SDK timeout') {
+      setSplashMsg('');
+      // أظهر splash مع رسالة واضحة
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.innerHTML = `
+          <div style="font-size:48px;font-weight:900;color:#fff;font-family:'Cairo',sans-serif;">ZAYN <span style="color:#0ABFA3;">PI</span></div>
+          <div style="color:rgba(255,255,255,0.7);font-family:'Cairo',sans-serif;font-size:15px;text-align:center;padding:0 30px;line-height:1.8;">
+            ⚠️ يجب فتح التطبيق من داخل<br>
+            <strong style="color:#0ABFA3;">Pi Browser</strong><br>
+            وليس من متصفح عادي
+          </div>
+          <div style="margin-top:10px;color:rgba(255,255,255,0.4);font-family:'Cairo',sans-serif;font-size:12px;text-align:center;padding:0 20px;">
+            افتح تطبيق Pi Network ← Pi Browser ← اكتب رابط التطبيق
+          </div>
+        `;
+      }
+    } else {
+      hideSplash();
     }
   }
 });
