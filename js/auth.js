@@ -2,10 +2,23 @@ import state from './state.js';
 import { db, doc, getDoc } from './firebase.js';
 import { showToast } from './ui.js';
 
-window.initPi = async () => {
+// Initialize Pi SDK once — modules run after DOM is ready so this is safe
+if (typeof Pi !== 'undefined') {
   try {
-    await Pi.init({ version: "2.0", sandbox: false });
+    Pi.init({ version: "2.0", sandbox: false });
+  } catch(e) {
+    console.warn('Pi.init failed:', e);
+  }
+}
 
+window.initPi = async () => {
+  // Pi SDK not available — app is not running inside Pi Browser
+  if (typeof Pi === 'undefined') {
+    showToast('يرجى فتح التطبيق داخل Pi Browser');
+    return;
+  }
+
+  try {
     const auth = await Pi.authenticate(
       ['username', 'payments'],
       async (payment) => {
@@ -30,7 +43,7 @@ window.initPi = async () => {
     );
 
     state.currentUser = auth.user;
-    state.accessToken = auth.accessToken; // used in Authorization header for all API calls
+    state.accessToken = auth.accessToken;
 
     const badge = `<div class="user-badge"><i class="fas fa-circle" style="color:var(--gold);font-size:8px"></i> ${state.currentUser.username}</div>`;
     document.getElementById('auth-area').innerHTML = badge;
@@ -41,7 +54,7 @@ window.initPi = async () => {
     try {
       const salonSnap = await getDoc(doc(db, "salons", state.currentUser.username));
       if (salonSnap.exists()) {
-        state.isOwner       = true;
+        state.isOwner        = true;
         state.ownerSalonData = salonSnap.data();
         state.ownerServices  = state.ownerSalonData.services || [];
       }
@@ -51,6 +64,9 @@ window.initPi = async () => {
     if (window.loadBookings) window.loadBookings();
 
   } catch(e) {
-    showToast('افتح التطبيق داخل Pi Browser');
+    console.error('Pi.authenticate error:', e);
+    // Show the real error to help diagnose in Pi Browser console
+    const msg = e?.message || e?.toString() || 'unknown error';
+    showToast(`خطأ في تسجيل الدخول: ${msg}`);
   }
 };
