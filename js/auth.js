@@ -2,23 +2,14 @@ import state from './state.js';
 import { db, doc, getDoc } from './firebase.js';
 import { showToast } from './ui.js';
 
-let _piReady = false;
-
 window.initPi = async () => {
-  if (typeof Pi === 'undefined') {
-    showToast('يرجى فتح التطبيق داخل Pi Browser');
-    return;
-  }
-
   try {
-    if (!_piReady) {
-      await Pi.init({ version: "2.0", sandbox: true });
-      _piReady = true;
-    }
+    await Pi.init({ version: "2.0", sandbox: true });
 
     const auth = await Pi.authenticate(
       ['username', 'payments'],
       async (payment) => {
+        // onIncompletePaymentFound: clear pending payment to unblock new ones
         try {
           const txid = payment.transaction?.txid;
           if (txid) {
@@ -50,7 +41,7 @@ window.initPi = async () => {
     try {
       const salonSnap = await getDoc(doc(db, "salons", state.currentUser.username));
       if (salonSnap.exists()) {
-        state.isOwner        = true;
+        state.isOwner       = true;
         state.ownerSalonData = salonSnap.data();
         state.ownerServices  = state.ownerSalonData.services || [];
       }
@@ -60,7 +51,6 @@ window.initPi = async () => {
     if (window.loadBookings) window.loadBookings();
 
   } catch(e) {
-    console.error('Pi auth error:', e);
-    showToast(`خطأ: ${e?.message || String(e)}`);
+    showToast('افتح التطبيق داخل Pi Browser');
   }
 };
