@@ -888,7 +888,7 @@
     <div class="header-top">
       <div class="logo">ZAYN <span>PI</span></div>
       <div id="auth-area">
-        <button class="pi-btn" onclick="initPi()">
+        <button class="pi-btn" id="pi-login-btn" onclick="initPi()">
           <i class="fas fa-circle" style="color:#F5C842;font-size:8px"></i> دخول بـ Pi
         </button>
       </div>
@@ -2361,6 +2361,11 @@ window.cancelBooking = async (bookingId, dateTime, amount) => {
 
 // ===== PI AUTH =====
 window.initPi = async () => {
+  const loginBtn = document.getElementById('pi-login-btn');
+  if (loginBtn) {
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="color:#F5C842;font-size:8px"></i> جاري الاتصال...';
+  }
   try {
     await Pi.init({ version: "2.0", sandbox: false });
     console.log('✅ Pi SDK initialized');
@@ -2446,7 +2451,16 @@ window.initPi = async () => {
     showToast(`مرحباً ${currentUser.username}!`);
     loadBookings();
   } catch(e) {
-    showToast('افتح التطبيق داخل Pi Browser');
+    console.error('initPi error:', e);
+    if (loginBtn) {
+      loginBtn.disabled = false;
+      loginBtn.innerHTML = '<i class="fas fa-circle" style="color:#F5C842;font-size:8px"></i> دخول بـ Pi';
+    }
+    if (!window.Pi) {
+      showToast('افتح التطبيق داخل Pi Browser');
+    } else {
+      showToast('خطأ في الاتصال — اضغط للمحاولة مجدداً');
+    }
   }
 };
 
@@ -2568,6 +2582,22 @@ window.showToast = (msg) => {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
 };
+
+// ===== AUTO INIT على تحميل الصفحة =====
+document.addEventListener('DOMContentLoaded', () => {
+  // تشغيل تلقائي فقط داخل Pi Browser
+  if (window.Pi) {
+    initPi();
+  } else {
+    // انتظر تحميل Pi SDK ثم شغّل
+    const sdkScript = document.querySelector('script[src*="minepi"]');
+    if (sdkScript) {
+      sdkScript.addEventListener('load', () => {
+        if (window.Pi) initPi();
+      });
+    }
+  }
+});
 
 </script>
 </body>
