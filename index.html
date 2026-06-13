@@ -878,6 +878,143 @@
     color:var(--teal-dark);
     font-weight:700;
   }
+  /* ===== NOTIFICATION BADGE ===== */
+  .notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-family: 'Cairo', sans-serif;
+  }
+  .nav-item-wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+
+  /* ===== NOTIFICATIONS PAGE ===== */
+  .notif-item {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border-right: 4px solid var(--teal);
+    transition: opacity 0.3s;
+  }
+  .notif-item.unread { border-right-color: var(--gold); background: #FFFBF0; }
+  .notif-item.read { opacity: 0.65; border-right-color: var(--border); }
+  .notif-icon { font-size: 24px; flex-shrink: 0; }
+  .notif-body { flex: 1; }
+  .notif-title { font-weight: 700; font-size: 14px; color: var(--dark); }
+  .notif-text { font-size: 12px; color: var(--gray); margin-top: 3px; line-height: 1.5; }
+  .notif-time { font-size: 11px; color: var(--gray); margin-top: 4px; }
+
+  /* ===== OWNER TABS ===== */
+  .owner-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 20px;
+    margin: 16px 0 0;
+    border-bottom: 2px solid var(--border);
+  }
+  .owner-tab {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--gray);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+  .owner-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+  /* ===== CALENDAR ===== */
+  .cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .cal-nav-btn {
+    background: var(--teal-light);
+    border: none;
+    color: var(--teal);
+    font-size: 18px;
+    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 0 12px;
+  }
+  .cal-day-name {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray);
+    padding: 4px 0;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .cal-day:hover { background: var(--teal-light); }
+  .cal-day.has-booking { background: var(--teal); color: #fff; font-weight: 900; }
+  .cal-day.has-booking:hover { background: var(--teal-dark); }
+  .cal-day.today { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .cal-day.other-month { color: var(--border); cursor: default; }
+  .cal-day.selected { outline: 2px solid var(--teal-dark); outline-offset: 1px; }
+  .cal-detail {
+    margin: 14px 20px 0;
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    min-height: 60px;
+  }
+
+  /* ===== STATS ===== */
+  .stats-section { padding: 16px 20px; }
+  .stats-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+  }
+  .stats-card-title { font-weight: 700; font-size: 14px; color: var(--dark); margin-bottom: 12px; }
+  .chart-wrap { position: relative; height: 220px; }
 </style>
 </head>
 <body>
@@ -998,6 +1135,15 @@
     </div>
   </div>
 
+  <!-- Owner Tabs -->
+  <div class="owner-tabs">
+    <div class="owner-tab active" id="owner-tab-main" onclick="switchOwnerTab('main')">🏠 الرئيسية</div>
+    <div class="owner-tab" id="owner-tab-calendar" onclick="switchOwnerTab('calendar')">📅 التقويم</div>
+    <div class="owner-tab" id="owner-tab-stats" onclick="switchOwnerTab('stats')">📊 إحصائيات</div>
+  </div>
+
+  <!-- TAB: Main -->
+  <div id="owner-tab-content-main">
   <div id="owner-dashboard">
     <!-- Revenue Card -->
     <div class="revenue-card">
@@ -1114,6 +1260,51 @@
     <div class="section-title">آخر الحجوزات</div>
     <div id="owner-recent-bookings" style="padding: 0 20px;"></div>
   </div>
+  </div><!-- end owner-tab-content-main -->
+
+  <!-- TAB: Calendar -->
+  <div id="owner-tab-content-calendar" style="display:none;">
+    <div class="cal-header">
+      <button class="cal-nav-btn" onclick="calPrev()">›</button>
+      <span id="cal-month-label"></span>
+      <button class="cal-nav-btn" onclick="calNext()">‹</button>
+    </div>
+    <div class="cal-grid" id="cal-day-names"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-detail" id="cal-detail">
+      <p style="color:var(--gray);font-size:13px;text-align:center;">اضغط على يوم لرؤية الحجوزات</p>
+    </div>
+  </div>
+
+  <!-- TAB: Stats -->
+  <div id="owner-tab-content-stats" style="display:none;">
+    <div class="stats-section">
+      <div class="stats-card">
+        <div class="stats-card-title">توزيع حالات الحجوزات</div>
+        <div class="chart-wrap"><canvas id="chart-pie"></canvas></div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">إيرادات آخر 7 أيام (Pi)</div>
+        <div class="chart-wrap"><canvas id="chart-bar"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== NOTIFICATIONS PAGE ===== -->
+<div id="notifications-page" class="page">
+  <div class="app-header">
+    <div class="header-top">
+      <div class="logo">ZAYN <span>PI</span></div>
+      <button onclick="markAllRead()" style="background:none;border:none;color:var(--teal);font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">تحديد كمقروء</button>
+    </div>
+  </div>
+  <div class="page-content">
+    <div id="notif-list">
+      <div class="empty-state"><i class="fas fa-bell-slash"></i><p>لا توجد إشعارات</p></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== BOTTOM NAV ===== -->
@@ -1125,6 +1316,13 @@
   <div class="nav-item" id="nav-bookings" onclick="switchPage('bookings-page', 'nav-bookings')">
     <i class="fas fa-calendar-check"></i>
     <span>حجوزاتي</span>
+  </div>
+  <div class="nav-item" id="nav-notifs" onclick="switchPage('notifications-page', 'nav-notifs')">
+    <div class="nav-item-wrap">
+      <i class="fas fa-bell"></i>
+      <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
+    </div>
+    <span>إشعارات</span>
   </div>
   <div class="nav-item" id="nav-profile" onclick="switchPage('profile-page', 'nav-profile')">
     <i class="fas fa-user"></i>
@@ -2075,6 +2273,7 @@ async function loadOwnerDashboard() {
     });
     const allData = await allRes.json();
     const allBookings = allData.bookings || [];
+    ownerAllBookingsCache = allBookings;
 
     let revenue = 0;
     let todayCount = 0;
@@ -2486,6 +2685,7 @@ window.initPi = async () => {
     hideSplash();
     showToast(`مرحباً ${currentUser.username}!`);
     loadBookings();
+    loadNotifications();
   } catch(e) {
     console.error('initPi error:', e);
     hideSplash();
@@ -2514,6 +2714,7 @@ window.switchPage = (pageId, navId) => {
   }
 
   if (pageId === 'bookings-page') loadBookings();
+  if (pageId === 'notifications-page') loadNotifications();
 };
 
 // ===== MODAL HELPERS =====
@@ -2634,6 +2835,232 @@ function hideSplash() {
 function setSplashMsg(msg) {
   const el = document.getElementById('splash-msg');
   if (el) el.textContent = msg;
+}
+
+// ===== NOTIFICATIONS =====
+async function loadNotifications() {
+  if (!currentUser) return;
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--gray);"><i class="fas fa-circle-notch fa-spin" style="font-size:24px;"></i></div>`;
+
+  try {
+    const { collection, query, where, orderBy, getDocs, limit: fsLimit } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const q = query(
+      collection(db, 'notifications'),
+      where('to', '==', currentUser.username),
+      orderBy('createdAt', 'desc'),
+      fsLimit(30)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      list.innerHTML = `<div class="empty-state"><i class="fas fa-bell-slash"></i><p>لا توجد إشعارات</p></div>`;
+      updateNotifBadge(0);
+      return;
+    }
+    let unread = 0;
+    let html = '';
+    snap.forEach(d => {
+      const n = d.data();
+      if (!n.isRead) unread++;
+      const icon = n.type === 'booking_accepted' ? '✅' :
+                   n.type === 'booking_rejected' ? '❌' :
+                   n.type === 'booking_cancelled' ? '🚫' :
+                   n.type === 'new_booking' ? '🔔' : '📩';
+      const timeStr = n.createdAt?.toDate
+        ? n.createdAt.toDate().toLocaleString('ar-EG', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+        : '';
+      html += `<div class="notif-item ${n.isRead ? 'read' : 'unread'}" id="notif-${d.id}">
+        <div class="notif-icon">${icon}</div>
+        <div class="notif-body">
+          <div class="notif-title">${clean(n.title || '')}</div>
+          <div class="notif-text">${clean(n.body || '')}</div>
+          <div class="notif-time">${timeStr}</div>
+        </div>
+      </div>`;
+    });
+    list.innerHTML = html;
+    updateNotifBadge(unread);
+  } catch(e) {
+    console.error('load notifications error:', e.message);
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>تعذر تحميل الإشعارات</p></div>`;
+  }
+}
+
+function updateNotifBadge(count) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+window.markAllRead = async () => {
+  if (!currentUser) return;
+  try {
+    const { collection, query, where, getDocs, updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const q = query(collection(db, 'notifications'), where('to', '==', currentUser.username), where('isRead', '==', false));
+    const snap = await getDocs(q);
+    await Promise.all(snap.docs.map(d => updateDoc(fsDoc(db, 'notifications', d.id), { isRead: true })));
+    document.querySelectorAll('.notif-item.unread').forEach(el => {
+      el.classList.remove('unread');
+      el.classList.add('read');
+    });
+    updateNotifBadge(0);
+    showToast('تم تحديد جميع الإشعارات كمقروءة');
+  } catch(e) { showToast('خطأ في تحديث الإشعارات'); }
+};
+
+// ===== OWNER PAGE TABS =====
+let ownerCalMonth = new Date();
+let ownerAllBookingsCache = [];
+let chartPie = null;
+let chartBar = null;
+
+window.switchOwnerTab = (tab) => {
+  ['main', 'calendar', 'stats'].forEach(t => {
+    const content = document.getElementById(`owner-tab-content-${t}`);
+    const tabEl = document.getElementById(`owner-tab-${t}`);
+    if (content) content.style.display = t === tab ? '' : 'none';
+    if (tabEl) tabEl.classList.toggle('active', t === tab);
+  });
+  if (tab === 'calendar') renderOwnerCalendar();
+  if (tab === 'stats') renderOwnerStats();
+};
+
+// ===== CALENDAR =====
+const CAL_DAYS_AR = ['أح','إث','ثل','أر','خم','جم','سب'];
+
+function renderOwnerCalendar() {
+  const grid = document.getElementById('cal-grid');
+  const dayNames = document.getElementById('cal-day-names');
+  const label = document.getElementById('cal-month-label');
+  if (!grid) return;
+
+  const year = ownerCalMonth.getFullYear();
+  const month = ownerCalMonth.getMonth();
+  label.textContent = ownerCalMonth.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+  dayNames.innerHTML = CAL_DAYS_AR.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const bookedDays = new Set();
+  ownerAllBookingsCache.forEach(b => {
+    const raw = (b.date || b.dateTime || '').split(' ')[0];
+    if (!raw) return;
+    const dt = new Date(raw);
+    if (isNaN(dt)) return;
+    if (dt.getFullYear() === year && dt.getMonth() === month && !['cancelled','rejected'].includes(b.status)) {
+      bookedDays.add(dt.getDate());
+    }
+  });
+
+  let html = '';
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day other-month"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="cal-day ${bookedDays.has(d) ? 'has-booking' : ''} ${ds === todayStr ? 'today' : ''}"
+      onclick="calSelectDay(${year},${month},${d},this)">${d}</div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('cal-detail').innerHTML = `<p style="color:var(--gray);font-size:13px;text-align:center;">اضغط على يوم لرؤية الحجوزات</p>`;
+}
+
+window.calSelectDay = (year, month, day, el) => {
+  document.querySelectorAll('.cal-day.selected').forEach(e => e.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const dayBookings = ownerAllBookingsCache.filter(b => {
+    const d = (b.date || b.dateTime || '').split(' ')[0];
+    return d === ds && !['cancelled','rejected'].includes(b.status);
+  });
+  const detail = document.getElementById('cal-detail');
+  if (!dayBookings.length) {
+    detail.innerHTML = `<p style="color:var(--gray);font-size:13px;text-align:center;">لا توجد حجوزات في هذا اليوم</p>`;
+    return;
+  }
+  detail.innerHTML = dayBookings.map(b => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-weight:700;font-size:13px;">@${clean(b.userId||b.user||'')}</div>
+        <div style="font-size:12px;color:var(--gray);">✂️ ${clean(b.serviceName||b.service||'')} · ${clean((b.dateTime||'').split(' ')[1]||'')}</div>
+      </div>
+      <span class="status-badge status-${b.status||'pending'}">${
+        b.status==='accepted'?'مقبول':b.status==='checkedin'?'حضر':b.status==='completed'?'مكتمل':'انتظار'
+      }</span>
+    </div>`).join('');
+};
+
+window.calPrev = () => { ownerCalMonth = new Date(ownerCalMonth.getFullYear(), ownerCalMonth.getMonth()-1, 1); renderOwnerCalendar(); };
+window.calNext = () => { ownerCalMonth = new Date(ownerCalMonth.getFullYear(), ownerCalMonth.getMonth()+1, 1); renderOwnerCalendar(); };
+
+// ===== STATS CHARTS =====
+async function renderOwnerStats() {
+  if (!ownerAllBookingsCache.length) {
+    const sec = document.querySelector('#owner-tab-content-stats .stats-section');
+    if (sec) sec.innerHTML = `<div class="empty-state"><i class="fas fa-chart-pie"></i><p>لا توجد بيانات كافية</p></div>`;
+    return;
+  }
+  if (!window.Chart) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  const counts = { pending:0, accepted:0, checkedin:0, completed:0, cancelled:0, rejected:0 };
+  ownerAllBookingsCache.forEach(b => { if (counts[b.status]!==undefined) counts[b.status]++; });
+
+  const pieCtx = document.getElementById('chart-pie');
+  if (pieCtx) {
+    if (chartPie) { chartPie.destroy(); chartPie = null; }
+    chartPie = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['انتظار','مقبول','حضر','مكتمل','ملغي','مرفوض'],
+        datasets: [{ data: Object.values(counts), backgroundColor: ['#F5C842','#0ABFA3','#8B5CF6','#14B8A6','#EF4444','#F97316'], borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Cairo'}, padding:10 } } } }
+    });
+  }
+
+  const days = [], revenues = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    days.push(d.toLocaleDateString('ar-EG', {weekday:'short'}));
+    const rev = ownerAllBookingsCache
+      .filter(b => (b.date||b.dateTime||'').split(' ')[0]===ds && b.status==='completed')
+      .reduce((s,b) => s+(b.servicePrice||0), 0);
+    revenues.push(parseFloat(rev.toFixed(2)));
+  }
+
+  const barCtx = document.getElementById('chart-bar');
+  if (barCtx) {
+    if (chartBar) { chartBar.destroy(); chartBar = null; }
+    chartBar = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: days,
+        datasets: [{ label:'Pi', data:revenues, backgroundColor:'rgba(10,191,163,0.7)', borderRadius:8, borderSkipped:false }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales: {
+          y:{ beginAtZero:true, grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{family:'Cairo'} } },
+          x:{ grid:{ display:false }, ticks:{ font:{family:'Cairo'} } }
+        }
+      }
+    });
+  }
 }
 
 function waitForPiSDK(timeout = 8000) {

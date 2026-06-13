@@ -42,6 +42,16 @@ export default async function handler(req, res) {
       case 'accept':
         if (b.salonId !== callerUsername) return res.status(403).json({ error: 'غير مصرح' });
         updates = { status: 'accepted', acceptedAt: FieldValue.serverTimestamp() };
+        await db.collection('notifications').add({
+          to: b.userId || b.user,
+          type: 'booking_accepted',
+          title: 'تم قبول حجزك ✅',
+          body: `تم قبول حجزك في ${b.salonName || b.salonId} — ${b.dateTime || ''}`,
+          bookingId: snap.id,
+          salonId: b.salonId,
+          isRead: false,
+          createdAt: FieldValue.serverTimestamp()
+        });
         break;
 
       case 'reject':
@@ -52,6 +62,16 @@ export default async function handler(req, res) {
           cancelledBy: 'owner',
           cancelledAt: FieldValue.serverTimestamp()
         };
+        await db.collection('notifications').add({
+          to: b.userId || b.user,
+          type: 'booking_rejected',
+          title: 'تم رفض حجزك ❌',
+          body: `تم رفض حجزك في ${b.salonName || b.salonId}: ${reason || 'ظرف طارئ'}`,
+          bookingId: snap.id,
+          salonId: b.salonId,
+          isRead: false,
+          createdAt: FieldValue.serverTimestamp()
+        });
         break;
 
       case 'cancel': {
@@ -64,6 +84,19 @@ export default async function handler(req, res) {
         const refundPolicy = hoursLeft >= 24 ? 'full_refund' : hoursLeft >= 2 ? 'partial_refund' : 'no_refund';
         const refundAmount = refundPolicy === 'full_refund' ? b.total :
                              refundPolicy === 'partial_refund' ? +(b.total * 0.5).toFixed(2) : 0;
+
+        if (!isOwner) {
+          await db.collection('notifications').add({
+            to: b.salonId,
+            type: 'booking_cancelled',
+            title: 'إلغاء حجز 🚫',
+            body: `@${callerUsername} ألغى حجزه (${b.serviceName || b.service || ''}) — ${b.dateTime || ''}`,
+            bookingId: snap.id,
+            salonId: b.salonId,
+            isRead: false,
+            createdAt: FieldValue.serverTimestamp()
+          });
+        }
 
         updates = {
           status: 'cancelled',
