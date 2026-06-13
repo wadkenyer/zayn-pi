@@ -1960,24 +1960,24 @@ window.registerSalon = async () => {
 
     await Pi.createPayment(paymentData, {
       onReadyForServerApproval: async (paymentId) => {
-        try { await fetch('/api/approve', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId}) }); } catch(e) {}
+        const r = await fetch('/api/approve', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId}) });
+        if (!r.ok) throw new Error('Approve failed');
       },
       onReadyForServerCompletion: async (paymentId, txid) => {
-        try { await fetch('/api/complete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId, txid}) }); } catch(e) {}
+        await fetch('/api/complete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId, txid}) });
 
-        const salonRef = doc(db, "salons", currentUser.username);
-        await setDoc(salonRef, {
-          name, city, gender, img, phone, desc,
-          openTime, closeTime,
-          owner: currentUser.username,
-          available: true,
-          rating: 5.0,
-          reviews: 0,
-          revenue: 0,
-          registrationTxid: txid,
-          services: [],
-          createdAt: serverTimestamp()
+        // حفظ الصالون عبر Admin SDK
+        const regRes = await fetch('/api/save-salon', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            ownerUsername: currentUser.username,
+            action: 'register',
+            data: { name, city, gender, img, phone, desc, openTime, closeTime, txid }
+          })
         });
+        const regData = await regRes.json();
+        if (!regData.success) throw new Error(regData.error || 'فشل حفظ الصالون');
 
         isOwner = true;
         ownerSalonData = { name, city, gender, img, phone, desc, openTime, closeTime, available: true, services: [], revenue: 0 };
@@ -1985,10 +1985,7 @@ window.registerSalon = async () => {
 
         closeModal('register-owner-modal');
         showToast(`🎉 تم تسجيل ${name} بنجاح!`);
-        
-        // تحديث قائمة الصالونات فوراً
         await loadSalons();
-        
         switchPage('owner-page', null);
         loadOwnerDashboard();
       },
@@ -2243,7 +2240,12 @@ window.toggleAvailability = async () => {
   }
 
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), { available: salonAvailable });
+    const r = await fetch('/api/save-salon', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'toggle-availability', data: {} })
+    });
+    const d = await r.json();
+    salonAvailable = d.available ?? salonAvailable;
     showToast(salonAvailable ? 'الصالون الآن متاح ✓' : 'تم التحديث: مشغول الآن');
   } catch(e) {
     showToast('تحقق من الاتصال');
@@ -2272,10 +2274,14 @@ window.updateSalonData = async () => {
   if (Object.keys(updates).length === 0) return showToast('لا يوجد تعديلات للحفظ');
 
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), updates);
+    const r = await fetch('/api/save-salon', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-settings', data: updates })
+    });
+    const d = await r.json();
+    if (!d.success) return showToast(d.error || 'خطأ في الحفظ');
     showToast('✅ تم حفظ التعديلات');
     loadSalons();
-    // تحديث ownerSalonData
     ownerSalonData = { ...ownerSalonData, ...updates };
     if (updates.name) document.getElementById('owner-salon-name-header').textContent = updates.name;
   } catch(e) {
@@ -2305,22 +2311,35 @@ window.saveService = async () => {
   ownerServices.push({ name, duration, price });
 
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), { services: ownerServices });
+    const r = await fetch('/api/save-salon', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-services', data: { services: ownerServices } })
+    });
+    const d = await r.json();
+    if (!d.success) { ownerServices.pop(); return showToast(d.error || 'خطأ في الحفظ'); }
     closeModal('add-service-modal');
     renderOwnerServices();
     showToast('✓ تم إضافة الخدمة');
   } catch(e) {
+    ownerServices.pop();
     showToast('خطأ في الحفظ');
   }
 };
 
 window.deleteService = async (idx) => {
-  ownerServices.splice(idx, 1);
+  const removed = ownerServices.splice(idx, 1);
   try {
-    await updateDoc(doc(db, "salons", currentUser.username), { services: ownerServices });
+    const r = await fetch('/api/save-salon', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-services', data: { services: ownerServices } })
+    });
+    const d = await r.json();
+    if (!d.success) { ownerServices.splice(idx, 0, ...removed); return showToast('خطأ في الحذف'); }
     renderOwnerServices();
     showToast('تم حذف الخدمة');
-  } catch(e) {}
+  } catch(e) {
+    ownerServices.splice(idx, 0, ...removed);
+  }
 };
 
 // ===== CANCEL BOOKING =====

@@ -1,74 +1,28 @@
-// api/check-slot.js
-// المهمة: منع حجز نفس الوقت مرتين في نفس الصالون
-// بسيط وفعّال — بدون تعقيد غير ضروري
+// api/check-slot.js — التحقق من توفر وقت الحجز عبر Admin SDK
+import { getAdminDb, cors } from './_admin.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const { salonId, date, time } = req.body;
-
   if (!salonId || !date || !time) {
     return res.status(400).json({ error: 'salonId و date و time مطلوبة' });
   }
 
-  const PI_API_KEY = process.env.PI_API_KEY;
-
   try {
-    // نتحقق من Firebase REST API مباشرة
-    const projectId = 'zayn-pi';
+    const db = getAdminDb();
     const dateTime = `${date} ${time}`;
 
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+    const snap = await db.collection('bookings')
+      .where('salonId', '==', salonId)
+      .where('dateTime', '==', dateTime)
+      .where('status', 'in', ['pending', 'accepted', 'checkedin'])
+      .limit(1)
+      .get();
 
-    const query = {
-      structuredQuery: {
-        from: [{ collectionId: 'bookings' }],
-        where: {
-          compositeFilter: {
-            op: 'AND',
-            filters: [
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'salonId' },
-                  op: 'EQUAL',
-                  value: { stringValue: salonId }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'dateTime' },
-                  op: 'EQUAL',
-                  value: { stringValue: dateTime }
-                }
-              },
-              {
-                fieldFilter: {
-                  field: { fieldPath: 'status' },
-                  op: 'NOT_EQUAL',
-                  value: { stringValue: 'cancelled' }
-                }
-              }
-            ]
-          }
-        },
-        limit: 1
-      }
-    };
-
-    const response = await fetch(firestoreUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    });
-
-    const data = await response.json();
-
-    // إذا وُجد حجز = الوقت محجوز
-    const isBooked = Array.isArray(data) && data.length > 0 && data[0].document;
+    const isBooked = !snap.empty;
 
     return res.status(200).json({
       available: !isBooked,
@@ -77,7 +31,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('check-slot error:', error.message);
-    // في حال الخطأ نسمح بالحجز ونتحقق لاحقاً
-    return res.status(200).json({ available: true, message: 'تحقق جزئي' });
+    // إذا فشل التحقق — نمنع الحجز احترازياً
+    return res.status(200).json({ available: false, message: 'تعذر التحقق، حاول مرة أخرى' });
   }
 }
