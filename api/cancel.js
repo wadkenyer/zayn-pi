@@ -72,6 +72,15 @@ export default async function handler(req, res) {
         refundPolicy,
         refundAmount: parseFloat(refundAmount.toFixed(2)),
       });
+      db.collection('notifications').add({
+        to: booking.salonId,
+        type: 'booking_cancelled',
+        title: 'إلغاء حجز',
+        body: `@${verifiedUser} ألغى حجزه في ${booking.dateTime || ''}`,
+        bookingId: cleanBookingId,
+        isRead: false,
+        createdAt: FieldValue.serverTimestamp(),
+      }).catch(() => {});
     }
 
     return res.status(200).json({

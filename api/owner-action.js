@@ -79,6 +79,15 @@ export default async function handler(req, res) {
 
     if (cleanAction === 'accept') {
       await bookingRef.update({ status: 'accepted', acceptedAt: FieldValue.serverTimestamp() });
+      db.collection('notifications').add({
+        to: booking.userId || booking.user,
+        type: 'booking_accepted',
+        title: 'تم قبول حجزك ✅',
+        body: `${booking.salonName || booking.salon || salonId} قبل حجزك في ${booking.dateTime || ''}`,
+        bookingId: cleanBookingId,
+        isRead: false,
+        createdAt: FieldValue.serverTimestamp(),
+      }).catch(() => {});
       return res.status(200).json({ success: true });
     }
 
@@ -90,6 +99,15 @@ export default async function handler(req, res) {
         cancelledBy: 'owner',
         cancelledAt: FieldValue.serverTimestamp()
       });
+      db.collection('notifications').add({
+        to: booking.userId || booking.user,
+        type: 'booking_rejected',
+        title: 'تم رفض حجزك ❌',
+        body: `${booking.salonName || booking.salon || salonId}: ${cleanReason}`,
+        bookingId: cleanBookingId,
+        isRead: false,
+        createdAt: FieldValue.serverTimestamp(),
+      }).catch(() => {});
       return res.status(200).json({ success: true });
     }
 

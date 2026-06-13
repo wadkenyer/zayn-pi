@@ -839,6 +839,49 @@
   .status-cancelled { background: #FEE2E2; color: #B91C1C; }
   .status-checkedin { background: #EDE9FE; color: #6D28D9; }
 
+  /* ===== NOTIFICATIONS ===== */
+  .notif-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--card-bg);
+    border-radius: 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .notif-unread { background: var(--teal-light); border-right: 4px solid var(--teal); }
+  .notif-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .notif-body { flex: 1; min-width: 0; }
+  .notif-title { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+  .notif-msg { font-size: 13px; color: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .notif-time { font-size: 11px; color: var(--gray); margin-top: 4px; }
+
+  /* ===== OWNER TABS ===== */
+  .owner-tabs {
+    display: flex;
+    margin: 0 20px 16px;
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .owner-tab {
+    flex: 1;
+    padding: 10px 4px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--gray);
+    transition: all 0.2s;
+  }
+  .owner-tab.active { background: #fff; color: var(--teal); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
   /* ===== SCROLL ===== */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -982,7 +1025,7 @@
   </div>
 
   <div id="owner-dashboard">
-    <!-- Revenue Card -->
+    <!-- Revenue Card (always visible) -->
     <div class="revenue-card">
       <div class="revenue-label">إجمالي الإيرادات هذا الشهر</div>
       <div class="revenue-amount"><span id="owner-revenue">0</span> <span style="font-size:18px;opacity:0.8">Pi</span></div>
@@ -1008,6 +1051,16 @@
         <div class="mini-stat-value" style="font-size:16px;" id="owner-commission">0 <span class="mini-stat-unit">Pi</span></div>
       </div>
     </div>
+
+    <!-- Owner Dashboard Tabs -->
+    <div class="owner-tabs">
+      <button class="owner-tab active" id="otab-bookings" onclick="switchOwnerTab('bookings')">⚙️ الإدارة</button>
+      <button class="owner-tab" id="otab-calendar" onclick="switchOwnerTab('calendar')">📅 التقويم</button>
+      <button class="owner-tab" id="otab-stats" onclick="switchOwnerTab('stats')">📊 الإحصائيات</button>
+    </div>
+
+    <!-- Tab: Management (default) -->
+    <div id="owner-tab-bookings">
 
     <!-- Availability Toggle -->
     <div class="section-title">حالة الصالون</div>
@@ -1096,6 +1149,44 @@
     <!-- Recent Bookings -->
     <div class="section-title">آخر الحجوزات</div>
     <div id="owner-recent-bookings" style="padding: 0 20px;"></div>
+
+    </div><!-- end owner-tab-bookings -->
+
+    <!-- Tab: Calendar -->
+    <div id="owner-tab-calendar" style="display:none; padding: 0 20px 20px;">
+      <div id="calendar-container"></div>
+    </div>
+
+    <!-- Tab: Stats/Charts -->
+    <div id="owner-tab-stats" style="display:none; padding: 0 20px 20px;">
+      <div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 3px 15px rgba(0,0,0,0.06);">
+        <div style="font-weight:700;font-size:14px;margin-bottom:12px;">📊 توزيع الحجوزات</div>
+        <canvas id="chart-status" height="220"></canvas>
+      </div>
+      <div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 3px 15px rgba(0,0,0,0.06);">
+        <div style="font-weight:700;font-size:14px;margin-bottom:12px;">💰 الإيرادات (آخر 7 أيام)</div>
+        <canvas id="chart-revenue" height="220"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== NOTIFICATIONS PAGE ===== -->
+<div id="notifications-page" class="page">
+  <div class="app-header">
+    <div class="header-top">
+      <div class="logo">ZAYN <span>PI</span></div>
+      <span style="color:rgba(255,255,255,0.5);font-size:14px;font-weight:700;">الإشعارات</span>
+    </div>
+  </div>
+  <div class="page-content">
+    <div id="notifications-list">
+      <div class="empty-state">
+        <i class="fas fa-bell"></i>
+        <p>سجّل دخولك لرؤية الإشعارات</p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1104,6 +1195,13 @@
   <div class="nav-item active" id="nav-home" onclick="switchPage('home-page', 'nav-home')">
     <i class="fas fa-home"></i>
     <span>الرئيسية</span>
+  </div>
+  <div class="nav-item" id="nav-notifs" onclick="switchPage('notifications-page', 'nav-notifs')">
+    <div style="position:relative;display:inline-block;">
+      <i class="fas fa-bell" style="font-size:20px;"></i>
+      <span id="notif-badge" style="display:none;position:absolute;top:-7px;right:-10px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;padding:1px 5px;border-radius:50px;min-width:18px;line-height:16px;text-align:center;"></span>
+    </div>
+    <span>إشعارات</span>
   </div>
   <div class="nav-item" id="nav-bookings" onclick="switchPage('bookings-page', 'nav-bookings')">
     <i class="fas fa-calendar-check"></i>

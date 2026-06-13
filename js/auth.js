@@ -1,6 +1,7 @@
 import state from './state.js';
 import { db, doc, getDoc } from './firebase.js';
 import { showToast } from './ui.js';
+import { initNotifications } from './notifications.js';
 
 window.initPi = async () => {
   try {
@@ -47,6 +48,7 @@ window.initPi = async () => {
       }
     } catch(e) {}
 
+    initNotifications(state.currentUser.username);
     showToast(`مرحباً ${state.currentUser.username}!`);
     if (window.loadBookings) window.loadBookings();
 

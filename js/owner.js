@@ -2,6 +2,12 @@ import state, { apiHeaders } from './state.js';
 import { db, doc, getDoc } from './firebase.js';
 import { showToast, openModal, closeModal, switchPage, escapeHtml } from './ui.js';
 
+// Module-level cache for tabs — no top-level async/side-effects
+let _recentBookings  = [];
+let _calendarData    = null; // null = not loaded yet
+let _chartStatus     = null;
+let _chartRevenue    = null;
+
 function renderOwnerServices() {
   const el = document.getElementById('owner-services-list');
   if (!state.ownerServices.length) {
@@ -134,8 +140,249 @@ async function loadOwnerDashboard() {
     if (recentEl) recentEl.innerHTML = recentHtml ||
       `<div class="empty-state" style="padding:20px 0;"><i class="fas fa-inbox"></i><p>لا حجوزات بعد</p></div>`;
 
+    // Cache for charts/calendar refresh
+    _recentBookings = recent || [];
+    _calendarData   = null; // reset so calendar re-fetches on next open
+
   } catch(e) {
     console.error('loadOwnerDashboard error:', e);
+  }
+}
+
+// ===== OWNER TABS =====
+window.switchOwnerTab = async (tab) => {
+  ['bookings', 'calendar', 'stats'].forEach(t => {
+    const panel = document.getElementById(`owner-tab-${t}`);
+    const btn   = document.getElementById(`otab-${t}`);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    if (btn)   btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'calendar') await _openCalendar();
+  if (tab === 'stats')    await _openCharts();
+};
+
+// ===== CALENDAR =====
+async function _openCalendar() {
+  const container = document.getElementById('calendar-container');
+  if (!container) return;
+
+  if (_calendarData === null) {
+    container.innerHTML = '<div class="spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+    try {
+      const res = await fetch('/api/owner-bookings', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ calendar: true })
+      });
+      _calendarData = res.ok ? ((await res.json()).calendar || []) : [];
+    } catch { _calendarData = []; }
+  }
+
+  _renderCalendar(_calendarData);
+}
+
+function _renderCalendar(bookings) {
+  const container = document.getElementById('calendar-container');
+  if (!container) return;
+
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth();
+
+  // Group by date
+  const byDate = {};
+  bookings.forEach(b => {
+    const d = b.date || (b.dateTime || '').split(' ')[0];
+    if (d) { byDate[d] = byDate[d] || []; byDate[d].push(b); }
+  });
+
+  const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const dayNames   = ['أحد','اثن','ثلا','أرب','خمس','جمع','سبت'];
+  const firstDay   = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  let grid = dayNames.map(d =>
+    `<div style="text-align:center;font-size:11px;color:var(--gray);font-weight:700;padding:4px;">${d}</div>`
+  ).join('');
+
+  for (let i = 0; i < firstDay; i++) grid += '<div></div>';
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const items = byDate[ds] || [];
+    const isToday = day === now.getDate();
+    const hasPending   = items.some(b => b.status === 'pending');
+    const hasAccepted  = items.some(b => b.status === 'accepted' || b.status === 'checkedin');
+    const dot = hasPending ? 'var(--gold)' : hasAccepted ? 'var(--teal)' : '#9CA3AF';
+
+    grid += `
+      <div onclick="showDayBookings('${ds}')" style="
+        text-align:center;padding:8px 4px;border-radius:10px;
+        cursor:${items.length ? 'pointer' : 'default'};
+        background:${isToday ? 'var(--teal)' : items.length ? 'var(--teal-light)' : 'transparent'};
+      ">
+        <div style="font-size:13px;font-weight:${isToday || items.length ? '700' : '400'};
+          color:${isToday ? '#fff' : items.length ? 'var(--teal-dark)' : 'var(--dark)'};">${day}</div>
+        ${items.length && !isToday ? `<div style="width:6px;height:6px;border-radius:50%;background:${dot};margin:2px auto 0;"></div>` : ''}
+        ${items.length && isToday  ? `<div style="font-size:9px;color:rgba(255,255,255,0.85);">${items.length}</div>` : ''}
+      </div>`;
+  }
+
+  container.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 3px 15px rgba(0,0,0,0.06);margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-weight:900;font-size:16px;">${monthNames[month]} ${year}</div>
+        <div style="font-size:12px;color:var(--gray);">${Object.keys(byDate).length} يوم فيه حجوزات</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">${
+        dayNames.map(d => `<div style="text-align:center;font-size:11px;color:var(--gray);font-weight:700;padding:4px;">${d}</div>`).join('')
+      }</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${grid.replace(dayNames.map(d =>
+        `<div style="text-align:center;font-size:11px;color:var(--gray);font-weight:700;padding:4px;">${d}</div>`
+      ).join(''), '')}</div>
+    </div>
+    <div id="day-bookings-detail"></div>`;
+
+  // Re-render properly (simplified approach)
+  const dayGrid = Array.from({ length: firstDay }, () => '<div></div>').join('');
+  let cells = '';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const items = byDate[ds] || [];
+    const isToday = day === now.getDate();
+    const hasPending  = items.some(b => b.status === 'pending');
+    const hasAccepted = items.some(b => b.status === 'accepted' || b.status === 'checkedin');
+    const dot = hasPending ? 'var(--gold)' : hasAccepted ? 'var(--teal)' : '#9CA3AF';
+    cells += `
+      <div onclick="showDayBookings('${ds}')" style="
+        text-align:center;padding:8px 4px;border-radius:10px;
+        cursor:${items.length ? 'pointer' : 'default'};
+        background:${isToday ? 'var(--teal)' : items.length ? 'var(--teal-light)' : 'transparent'};
+      ">
+        <div style="font-size:13px;font-weight:${isToday || items.length ? '700' : '400'};
+          color:${isToday ? '#fff' : items.length ? 'var(--teal-dark)' : 'var(--dark)'};">${day}</div>
+        ${items.length && !isToday ? `<div style="width:6px;height:6px;border-radius:50%;background:${dot};margin:2px auto 0;"></div>` : ''}
+        ${items.length && isToday  ? `<div style="font-size:9px;color:rgba(255,255,255,0.85);">${items.length}</div>` : ''}
+      </div>`;
+  }
+
+  container.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 3px 15px rgba(0,0,0,0.06);margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-weight:900;font-size:16px;">${monthNames[month]} ${year}</div>
+        <div style="font-size:12px;color:var(--gray);">${Object.keys(byDate).length} يوم</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
+        ${dayNames.map(d => `<div style="text-align:center;font-size:11px;color:var(--gray);font-weight:700;padding:4px;">${d}</div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">
+        ${Array.from({ length: firstDay }, () => '<div></div>').join('')}
+        ${cells}
+      </div>
+    </div>
+    <div id="day-bookings-detail"></div>`;
+}
+
+window.showDayBookings = (dateStr) => {
+  const detail = document.getElementById('day-bookings-detail');
+  if (!detail || !_calendarData) return;
+  const items = _calendarData.filter(b => {
+    const d = b.date || (b.dateTime || '').split(' ')[0];
+    return d === dateStr;
+  });
+  if (!items.length) { detail.innerHTML = ''; return; }
+  const statusLabel = { pending:'⏳ انتظار', accepted:'✅ مقبول', completed:'✓ مكتمل', cancelled:'✗ ملغي', checkedin:'📍 حضر', rejected:'❌ مرفوض' };
+  detail.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 3px 15px rgba(0,0,0,0.06);">
+      <div style="font-weight:900;font-size:15px;margin-bottom:12px;">📅 ${dateStr}</div>
+      ${items.map(b => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-weight:700;font-size:13px;">@${escapeHtml(b.user || '')}</div>
+            <div style="font-size:12px;color:var(--gray);">${escapeHtml(b.service || '')} · ${(b.dateTime || '').split(' ')[1] || ''}</div>
+          </div>
+          <span class="status-badge status-${b.status || 'pending'}">${statusLabel[b.status] || '⏳'}</span>
+        </div>`).join('')}
+    </div>`;
+};
+
+// ===== CHARTS =====
+async function _openCharts() {
+  // Load Chart.js dynamically — only when needed
+  if (!window.Chart) {
+    const loaded = await new Promise(resolve => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+      s.crossOrigin = 'anonymous';
+      s.onload  = () => resolve(true);
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+    if (!loaded) { showToast('تعذر تحميل الرسوم البيانية'); return; }
+  }
+
+  // Destroy previous instances
+  if (_chartStatus)  { _chartStatus.destroy();  _chartStatus  = null; }
+  if (_chartRevenue) { _chartRevenue.destroy(); _chartRevenue = null; }
+
+  const bookings = _recentBookings;
+
+  // --- Doughnut: status distribution ---
+  const counts = { pending: 0, accepted: 0, completed: 0, cancelled: 0 };
+  bookings.forEach(b => { if (counts[b.status] !== undefined) counts[b.status]++; });
+
+  const sc = document.getElementById('chart-status');
+  if (sc) {
+    _chartStatus = new Chart(sc, {
+      type: 'doughnut',
+      data: {
+        labels: ['انتظار', 'مقبول', 'مكتمل', 'ملغي'],
+        datasets: [{
+          data: [counts.pending, counts.accepted, counts.completed, counts.cancelled],
+          backgroundColor: ['#F5C842', '#0ABFA3', '#6D28D9', '#EF4444'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom', labels: { font: { family: 'Cairo' } } } },
+        cutout: '65%'
+      }
+    });
+  }
+
+  // --- Bar: revenue per day (last 7 days) ---
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split('T')[0];
+  });
+  const revenue = days.map(date =>
+    bookings
+      .filter(b => b.status === 'completed' && (b.dateTime || '').startsWith(date))
+      .reduce((s, b) => s + (b.servicePrice || 0), 0)
+  );
+
+  const rc = document.getElementById('chart-revenue');
+  if (rc) {
+    _chartRevenue = new Chart(rc, {
+      type: 'bar',
+      data: {
+        labels: days.map(d => d.slice(5)),
+        datasets: [{
+          label: 'Pi',
+          data: revenue,
+          backgroundColor: 'rgba(10,191,163,0.8)',
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
   }
 }
 

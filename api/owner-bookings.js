@@ -19,6 +19,23 @@ export default async function handler(req, res) {
   try {
     const db = getDb();
 
+    // Calendar mode: return all bookings with minimal fields for calendar view
+    if (req.body && req.body.calendar === true) {
+      const snap = await db.collection('bookings').where('salonId', '==', salonId).get();
+      const calendar = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          date: data.date || (data.dateTime || '').split(' ')[0],
+          dateTime: data.dateTime || '',
+          status: data.status || 'pending',
+          user: data.userId || data.user || '',
+          service: data.serviceName || data.service || '',
+        };
+      });
+      return res.status(200).json({ success: true, calendar });
+    }
+
     const pendingSnap = await db.collection('bookings')
       .where('salonId', '==', salonId)
       .where('status', '==', 'pending')
