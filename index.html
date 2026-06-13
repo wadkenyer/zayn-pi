@@ -1518,7 +1518,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, addDoc, getDocs, doc, updateDoc, setDoc, getDoc,
-  serverTimestamp, query, where
+  serverTimestamp, query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, signInWithCustomToken, signInAnonymously
@@ -2679,6 +2679,7 @@ window.initPi = async () => {
         isOwner = true;
         ownerSalonData = salonSnap.data();
         ownerServices = ownerSalonData.services || [];
+        startBookingListener();
       }
     } catch(e) {}
 
@@ -3061,6 +3062,42 @@ async function renderOwnerStats() {
       }
     });
   }
+}
+
+// ===== REAL-TIME BOOKING LISTENER (onSnapshot) =====
+let _bookingUnsubscribe = null;
+
+function startBookingListener() {
+  if (!currentUser || !isOwner) return;
+  if (_bookingUnsubscribe) _bookingUnsubscribe(); // إلغاء أي listener سابق
+
+  let initialized = false;
+  const q = query(
+    collection(db, 'bookings'),
+    where('salonId', '==', currentUser.username),
+    where('status', '==', 'pending')
+  );
+
+  _bookingUnsubscribe = onSnapshot(q, (snap) => {
+    if (!initialized) {
+      initialized = true;
+      return; // تجاهل البيانات الموجودة عند البداية
+    }
+    snap.docChanges().forEach(change => {
+      if (change.type === 'added') {
+        const b = change.doc.data();
+        const name = b.userId || b.user || 'زبون';
+        const service = b.serviceName || b.service || '';
+        showToast(`🔔 حجز جديد من @${name}${service ? ' — ' + service : ''}`);
+        // إذا كانت لوحة التحكم مفتوحة — حدّثها فوراً
+        if (document.getElementById('owner-page')?.classList.contains('active')) {
+          loadOwnerDashboard();
+        }
+      }
+    });
+  }, (err) => {
+    console.warn('booking listener error:', err.message);
+  });
 }
 
 function waitForPiSDK(timeout = 8000) {
