@@ -2846,12 +2846,10 @@ async function loadNotifications() {
   list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--gray);"><i class="fas fa-circle-notch fa-spin" style="font-size:24px;"></i></div>`;
 
   try {
-    const { collection, query, where, orderBy, getDocs, limit: fsLimit } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
     const q = query(
       collection(db, 'notifications'),
-      where('to', '==', currentUser.username),
-      orderBy('createdAt', 'desc'),
-      fsLimit(30)
+      where('to', '==', currentUser.username)
     );
     const snap = await getDocs(q);
     if (snap.empty) {
@@ -2859,9 +2857,16 @@ async function loadNotifications() {
       updateNotifBadge(0);
       return;
     }
+    // ترتيب client-side (الأحدث أولاً) — بدون orderBy لتجنب Composite Index
+    const docs = snap.docs.sort((a, b) => {
+      const ta = a.data().createdAt?.toMillis?.() || 0;
+      const tb = b.data().createdAt?.toMillis?.() || 0;
+      return tb - ta;
+    }).slice(0, 30);
+
     let unread = 0;
     let html = '';
-    snap.forEach(d => {
+    docs.forEach(d => {
       const n = d.data();
       if (!n.isRead) unread++;
       const icon = n.type === 'booking_accepted' ? '✅' :
