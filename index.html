@@ -878,6 +878,159 @@
     color:var(--teal-dark);
     font-weight:700;
   }
+  /* ===== NOTIFICATION BADGE ===== */
+  .notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-family: 'Cairo', sans-serif;
+  }
+  .nav-item-wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+
+  /* ===== NOTIFICATIONS PAGE ===== */
+  .notif-item {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border-right: 4px solid var(--teal);
+    transition: opacity 0.3s;
+  }
+  .notif-item.unread { border-right-color: var(--gold); background: #FFFBF0; }
+  .notif-item.read { opacity: 0.65; border-right-color: var(--border); }
+  .notif-icon { font-size: 24px; flex-shrink: 0; }
+  .notif-body { flex: 1; }
+  .notif-title { font-weight: 700; font-size: 14px; color: var(--dark); }
+  .notif-text { font-size: 12px; color: var(--gray); margin-top: 3px; line-height: 1.5; }
+  .notif-time { font-size: 11px; color: var(--gray); margin-top: 4px; }
+
+  /* ===== OWNER TABS ===== */
+  .owner-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 20px;
+    margin: 16px 0 0;
+    border-bottom: 2px solid var(--border);
+  }
+  .owner-tab {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--gray);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+  .owner-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+  /* ===== CALENDAR ===== */
+  .cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .cal-nav-btn {
+    background: var(--teal-light);
+    border: none;
+    color: var(--teal);
+    font-size: 18px;
+    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 0 12px;
+  }
+  .cal-day-name {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray);
+    padding: 4px 0;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .cal-day:hover { background: var(--teal-light); }
+  .cal-day.has-booking { background: var(--teal); color: #fff; font-weight: 900; }
+  .cal-day.has-booking:hover { background: var(--teal-dark); }
+  .cal-day.today { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .cal-day.other-month { color: var(--border); cursor: default; }
+  .cal-day.selected { outline: 2px solid var(--teal-dark); outline-offset: 1px; }
+  .cal-detail {
+    margin: 14px 20px 0;
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    min-height: 60px;
+  }
+
+  /* ===== STATS ===== */
+  .stats-section { padding: 16px 20px; }
+  .stats-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+  }
+  .stats-card-title { font-weight: 700; font-size: 14px; color: var(--dark); margin-bottom: 12px; }
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* ===== LEDGER ===== */
+  .ledger-card { background:var(--card-bg); border-radius:14px; padding:14px 16px; margin-bottom:10px; box-shadow:0 2px 10px rgba(0,0,0,0.06); }
+  .ledger-card.payout { border-right:4px solid var(--teal); }
+  .ledger-card.refund { border-right:4px solid #F59E0B; }
+  .ledger-card.completed { opacity:0.55; border-right-color:var(--border); }
+  .ledger-amount { font-size:22px; font-weight:900; color:var(--teal); }
+  .ledger-meta { font-size:12px; color:var(--gray); margin-top:3px; line-height:1.6; }
+  .ledger-due { font-size:11px; color:#ef4444; font-weight:700; }
+  .confirm-txid-row { display:flex; gap:8px; margin-top:10px; }
+  .confirm-txid-row input { flex:1; padding:10px 12px; border:2px solid var(--border); border-radius:10px; font-family:'Cairo',sans-serif; font-size:13px; outline:none; }
+  .confirm-txid-row input:focus { border-color:var(--teal); }
+  .confirm-btn-small { padding:10px 16px; background:var(--teal); color:#fff; border:none; border-radius:10px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .refund-status-tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; margin-top:6px; }
+  .refund-pending { background:#FEF3C7; color:#92400E; }
+  .refund-done { background:#D1FAE5; color:#065F46; }
 </style>
 </head>
 <body>
@@ -960,6 +1113,13 @@
     <i class="fas fa-store"></i>
     أنا صاحب صالون — لوحة التحكم
   </button>
+
+  <div style="padding: 0 20px;">
+    <button id="admin-ledger-btn" onclick="switchPage('admin-page', null)"
+      style="display:none;width:100%;margin-top:10px;padding:14px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15px;cursor:pointer;">
+      <i class="fas fa-table"></i> لوحة Admin — الدفعات والاستردادات
+    </button>
+  </div>
 
   <div style="padding: 0 20px;">
     <button onclick="initPi()" class="confirm-btn" id="profile-login-btn">
@@ -1097,6 +1257,26 @@
     <!-- Recent Bookings -->
     <div class="section-title">آخر الحجوزات</div>
     <div id="owner-recent-bookings" style="padding: 0 20px;"></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN LEDGER PAGE ===== -->
+<div id="admin-page" class="page">
+  <div class="app-header">
+    <div class="header-top">
+      <div class="logo">ZAYN <span>PI</span></div>
+      <span style="color:rgba(255,255,255,0.6);font-size:12px;font-weight:700;">🔐 Admin</span>
+    </div>
+  </div>
+  <div class="page-content">
+    <div style="display:flex;gap:8px;padding:0 20px 16px;flex-wrap:wrap;">
+      <button onclick="loadLedger('all')" id="ledger-btn-all" style="flex:1;padding:8px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">الكل</button>
+      <button onclick="loadLedger('payout_to_salon')" id="ledger-btn-payout" style="flex:1;padding:8px;background:var(--card-bg);color:var(--dark);border:2px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">مستحقات صالونات</button>
+      <button onclick="loadLedger('refund_to_customer')" id="ledger-btn-refund" style="flex:1;padding:8px;background:var(--card-bg);color:var(--dark);border:2px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">استردادات زبائن</button>
+    </div>
+    <div id="admin-ledger-list" style="padding:0 20px;">
+      <div class="empty-state"><i class="fas fa-circle-notch fa-spin"></i></div>
+    </div>
   </div>
 </div>
 
@@ -1860,6 +2040,8 @@ async function loadBookings() {
           <div style="font-size:11px;color:#bbb;margin-top:8px;">
             TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
           </div>
+          ${isCancelled && b.refundStatus === 'pending' ? `<span class="refund-status-tag refund-pending">⏳ استرداد قيد المعالجة</span>` : ''}
+          ${isCancelled && b.refundStatus === 'completed' ? `<span class="refund-status-tag refund-done">✅ تم الاسترداد</span>` : ''}
           ${canCancel ? `
           <button onclick="cancelBooking('${docId}', '${b.dateTime}', ${b.total || b.amount})"
             style="margin-top:12px;width:100%;padding:10px;border:2px solid #ef4444;border-radius:12px;
@@ -2453,6 +2635,9 @@ window.initPi = async () => {
     document.getElementById('profile-name').textContent = currentUser.username;
     document.getElementById('profile-status').textContent = '✓ متصل بـ Pi Network';
     document.getElementById('profile-login-btn').style.display = 'none';
+    if (currentUser.username === ADMIN_USERNAME) {
+      document.getElementById('admin-ledger-btn').style.display = 'block';
+    }
 
     // Check if owner
     try {
@@ -2483,6 +2668,8 @@ window.switchPage = (pageId, navId) => {
   }
 
   if (pageId === 'bookings-page') loadBookings();
+  if (pageId === 'notifications-page') loadNotifications();
+  if (pageId === 'admin-page') loadLedger('all');
 };
 
 // ===== MODAL HELPERS =====
@@ -2587,6 +2774,440 @@ window.showToast = (msg) => {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
 };
+
+// ===== AUTO INIT على تحميل الصفحة =====
+function hideSplash() {
+  const splash = document.getElementById('splash-screen');
+  if (splash) {
+    splash.style.opacity = '0';
+    splash.style.transition = 'opacity 0.4s ease';
+    setTimeout(() => splash.remove(), 400);
+  }
+}
+
+function setSplashMsg(msg) {
+  const el = document.getElementById('splash-msg');
+  if (el) el.textContent = msg;
+}
+
+// ===== NOTIFICATIONS =====
+async function loadNotifications() {
+  if (!currentUser) return;
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--gray);"><i class="fas fa-circle-notch fa-spin" style="font-size:24px;"></i></div>`;
+
+  try {
+    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const q = query(
+      collection(db, 'notifications'),
+      where('to', '==', currentUser.username)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      list.innerHTML = `<div class="empty-state"><i class="fas fa-bell-slash"></i><p>لا توجد إشعارات</p></div>`;
+      updateNotifBadge(0);
+      return;
+    }
+    // ترتيب client-side (الأحدث أولاً) — بدون orderBy لتجنب Composite Index
+    const docs = snap.docs.sort((a, b) => {
+      const ta = a.data().createdAt?.toMillis?.() || 0;
+      const tb = b.data().createdAt?.toMillis?.() || 0;
+      return tb - ta;
+    }).slice(0, 30);
+
+    let unread = 0;
+    let html = '';
+    docs.forEach(d => {
+      const n = d.data();
+      if (!n.isRead) unread++;
+      const icon = n.type === 'booking_accepted' ? '✅' :
+                   n.type === 'booking_rejected' ? '❌' :
+                   n.type === 'booking_cancelled' ? '🚫' :
+                   n.type === 'new_booking' ? '🔔' : '📩';
+      const timeStr = n.createdAt?.toDate
+        ? n.createdAt.toDate().toLocaleString('ar-EG', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+        : '';
+      html += `<div class="notif-item ${n.isRead ? 'read' : 'unread'}" id="notif-${d.id}">
+        <div class="notif-icon">${icon}</div>
+        <div class="notif-body">
+          <div class="notif-title">${clean(n.title || '')}</div>
+          <div class="notif-text">${clean(n.body || '')}</div>
+          <div class="notif-time">${timeStr}</div>
+        </div>
+      </div>`;
+    });
+    list.innerHTML = html;
+    updateNotifBadge(unread);
+  } catch(e) {
+    console.error('load notifications error:', e.message);
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>تعذر تحميل الإشعارات</p></div>`;
+  }
+}
+
+function updateNotifBadge(count) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+window.markAllRead = async () => {
+  if (!currentUser) return;
+  try {
+    const { collection, query, where, getDocs, updateDoc, doc: fsDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const q = query(collection(db, 'notifications'), where('to', '==', currentUser.username), where('isRead', '==', false));
+    const snap = await getDocs(q);
+    await Promise.all(snap.docs.map(d => updateDoc(fsDoc(db, 'notifications', d.id), { isRead: true })));
+    document.querySelectorAll('.notif-item.unread').forEach(el => {
+      el.classList.remove('unread');
+      el.classList.add('read');
+    });
+    updateNotifBadge(0);
+    showToast('تم تحديد جميع الإشعارات كمقروءة');
+  } catch(e) { showToast('خطأ في تحديث الإشعارات'); }
+};
+
+// ===== OWNER PAGE TABS =====
+let ownerCalMonth = new Date();
+let ownerAllBookingsCache = [];
+let chartPie = null;
+let chartBar = null;
+
+window.switchOwnerTab = (tab) => {
+  ['main', 'calendar', 'stats'].forEach(t => {
+    const content = document.getElementById(`owner-tab-content-${t}`);
+    const tabEl = document.getElementById(`owner-tab-${t}`);
+    if (content) content.style.display = t === tab ? '' : 'none';
+    if (tabEl) tabEl.classList.toggle('active', t === tab);
+  });
+  if (tab === 'calendar') renderOwnerCalendar();
+  if (tab === 'stats') renderOwnerStats();
+};
+
+// ===== CALENDAR =====
+const CAL_DAYS_AR = ['أح','إث','ثل','أر','خم','جم','سب'];
+
+function renderOwnerCalendar() {
+  const grid = document.getElementById('cal-grid');
+  const dayNames = document.getElementById('cal-day-names');
+  const label = document.getElementById('cal-month-label');
+  if (!grid) return;
+
+  const year = ownerCalMonth.getFullYear();
+  const month = ownerCalMonth.getMonth();
+  label.textContent = ownerCalMonth.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+  dayNames.innerHTML = CAL_DAYS_AR.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const bookedDays = new Set();
+  ownerAllBookingsCache.forEach(b => {
+    const raw = (b.date || b.dateTime || '').split(' ')[0];
+    if (!raw) return;
+    const dt = new Date(raw);
+    if (isNaN(dt)) return;
+    if (dt.getFullYear() === year && dt.getMonth() === month && !['cancelled','rejected'].includes(b.status)) {
+      bookedDays.add(dt.getDate());
+    }
+  });
+
+  let html = '';
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day other-month"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="cal-day ${bookedDays.has(d) ? 'has-booking' : ''} ${ds === todayStr ? 'today' : ''}"
+      onclick="calSelectDay(${year},${month},${d},this)">${d}</div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('cal-detail').innerHTML = `<p style="color:var(--gray);font-size:13px;text-align:center;">اضغط على يوم لرؤية الحجوزات</p>`;
+}
+
+window.calSelectDay = (year, month, day, el) => {
+  document.querySelectorAll('.cal-day.selected').forEach(e => e.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const dayBookings = ownerAllBookingsCache.filter(b => {
+    const d = (b.date || b.dateTime || '').split(' ')[0];
+    return d === ds && !['cancelled','rejected'].includes(b.status);
+  });
+  const detail = document.getElementById('cal-detail');
+  if (!dayBookings.length) {
+    detail.innerHTML = `<p style="color:var(--gray);font-size:13px;text-align:center;">لا توجد حجوزات في هذا اليوم</p>`;
+    return;
+  }
+  detail.innerHTML = dayBookings.map(b => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-weight:700;font-size:13px;">@${clean(b.userId||b.user||'')}</div>
+        <div style="font-size:12px;color:var(--gray);">✂️ ${clean(b.serviceName||b.service||'')} · ${clean((b.dateTime||'').split(' ')[1]||'')}</div>
+      </div>
+      <span class="status-badge status-${b.status||'pending'}">${
+        b.status==='accepted'?'مقبول':b.status==='checkedin'?'حضر':b.status==='completed'?'مكتمل':'انتظار'
+      }</span>
+    </div>`).join('');
+};
+
+window.calPrev = () => { ownerCalMonth = new Date(ownerCalMonth.getFullYear(), ownerCalMonth.getMonth()-1, 1); renderOwnerCalendar(); };
+window.calNext = () => { ownerCalMonth = new Date(ownerCalMonth.getFullYear(), ownerCalMonth.getMonth()+1, 1); renderOwnerCalendar(); };
+
+// ===== STATS CHARTS =====
+async function renderOwnerStats() {
+  if (!ownerAllBookingsCache.length) {
+    const sec = document.querySelector('#owner-tab-content-stats .stats-section');
+    if (sec) sec.innerHTML = `<div class="empty-state"><i class="fas fa-chart-pie"></i><p>لا توجد بيانات كافية</p></div>`;
+    return;
+  }
+  if (!window.Chart) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  const counts = { pending:0, accepted:0, checkedin:0, completed:0, cancelled:0, rejected:0 };
+  ownerAllBookingsCache.forEach(b => { if (counts[b.status]!==undefined) counts[b.status]++; });
+
+  const pieCtx = document.getElementById('chart-pie');
+  if (pieCtx) {
+    if (chartPie) { chartPie.destroy(); chartPie = null; }
+    chartPie = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['انتظار','مقبول','حضر','مكتمل','ملغي','مرفوض'],
+        datasets: [{ data: Object.values(counts), backgroundColor: ['#F5C842','#0ABFA3','#8B5CF6','#14B8A6','#EF4444','#F97316'], borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Cairo'}, padding:10 } } } }
+    });
+  }
+
+  const days = [], revenues = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    days.push(d.toLocaleDateString('ar-EG', {weekday:'short'}));
+    const rev = ownerAllBookingsCache
+      .filter(b => (b.date||b.dateTime||'').split(' ')[0]===ds && b.status==='completed')
+      .reduce((s,b) => s+(b.servicePrice||0), 0);
+    revenues.push(parseFloat(rev.toFixed(2)));
+  }
+
+  const barCtx = document.getElementById('chart-bar');
+  if (barCtx) {
+    if (chartBar) { chartBar.destroy(); chartBar = null; }
+    chartBar = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: days,
+        datasets: [{ label:'Pi', data:revenues, backgroundColor:'rgba(10,191,163,0.7)', borderRadius:8, borderSkipped:false }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales: {
+          y:{ beginAtZero:true, grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{family:'Cairo'} } },
+          x:{ grid:{ display:false }, ticks:{ font:{family:'Cairo'} } }
+        }
+      }
+    });
+  }
+}
+
+// ===== LEDGER (Admin + صالون + زبون) =====
+const ADMIN_USERNAME = 'wadkenyer'; // يطابق ADMIN_USERNAME في Vercel
+
+async function loadLedger(filterType = 'all') {
+  const list = document.getElementById('admin-ledger-list');
+  if (!list || !currentUser) return;
+
+  // تحديث أزرار الفلتر
+  ['all','payout_to_salon','refund_to_customer'].forEach(t => {
+    const btn = document.getElementById(`ledger-btn-${t === 'all' ? 'all' : t === 'payout_to_salon' ? 'payout' : 'refund'}`);
+    if (btn) {
+      const isActive = t === filterType;
+      btn.style.background = isActive ? 'var(--teal)' : 'var(--card-bg)';
+      btn.style.color = isActive ? '#fff' : 'var(--dark)';
+    }
+  });
+
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--gray);"><i class="fas fa-circle-notch fa-spin" style="font-size:24px;"></i></div>`;
+
+  try {
+    const body = { callerUsername: currentUser.username };
+    if (filterType !== 'all') body.filterType = filterType;
+
+    const res = await fetch('/api/get-ledger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (!data.success || !data.entries?.length) {
+      list.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--teal)"></i><p>لا توجد التزامات معلقة</p></div>`;
+      return;
+    }
+
+    list.innerHTML = data.entries.map(e => renderLedgerCard(e, data.isAdmin)).join('');
+  } catch(err) {
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>تعذر التحميل</p></div>`;
+  }
+}
+
+function renderLedgerCard(e, isAdmin) {
+  const isPayout = e.type === 'payout_to_salon';
+  const isDone   = e.status === 'completed';
+  const typeLabel = isPayout ? '💰 مستحق للصالون' : '↩️ استرداد للزبون';
+  const typeClass = isPayout ? 'payout' : 'refund';
+  const dueDate  = e.dueBy ? new Date(e.dueBy).toLocaleDateString('ar-EG', {day:'numeric',month:'short'}) : '';
+  const isOverdue = e.dueBy && !isDone && new Date(e.dueBy) < new Date();
+
+  const confirmRow = (isAdmin && !isDone) ? `
+    <div class="confirm-txid-row">
+      <input type="text" inputmode="text" placeholder="أدخل txid المعاملة من Pi" id="txid-${e.id}" autocomplete="off">
+      <button class="confirm-btn-small" onclick="confirmLedger('${e.id}')">تأكيد ✓</button>
+    </div>` : '';
+
+  const doneRow = isDone ? `<div style="font-size:11px;color:#065F46;margin-top:6px;font-weight:700;">✅ مكتمل — TX: ${e.confirmTxid?.substring(0,16) || ''}...</div>` : '';
+
+  return `
+    <div class="ledger-card ${typeClass} ${isDone ? 'completed' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${isPayout ? 'var(--teal)' : '#F59E0B'};margin-bottom:4px;">${typeLabel}</div>
+          <div class="ledger-amount">${e.amountOwed} Pi</div>
+          <div class="ledger-meta">
+            ${isPayout ? `🏪 ${clean(e.recipientLabel || '')}` : `👤 ${clean(e.recipientLabel || '')}`}<br>
+            ${isPayout ? `👤 ${clean(e.customerUsername || '')}` : `🏪 ${clean(e.salonName || '')}`}<br>
+            ✂️ ${clean(e.serviceName || '')}
+          </div>
+          ${isOverdue ? `<div class="ledger-due">⚠️ متأخر — كان يجب قبل ${dueDate}</div>` : (dueDate && !isDone ? `<div style="font-size:11px;color:var(--gray);">الموعد: ${dueDate}</div>` : '')}
+        </div>
+        <span style="font-size:11px;background:${isDone ? '#D1FAE5' : '#FEF3C7'};color:${isDone ? '#065F46' : '#92400E'};padding:3px 8px;border-radius:20px;font-weight:700;">${isDone ? 'مكتمل' : 'معلق'}</span>
+      </div>
+      ${confirmRow}
+      ${doneRow}
+    </div>`;
+}
+
+window.confirmLedger = async (ledgerId) => {
+  const input = document.getElementById(`txid-${ledgerId}`);
+  const txid = input?.value?.trim();
+  if (!txid || txid.length < 8) return showToast('أدخل txid صحيح');
+
+  input.disabled = true;
+  try {
+    const res = await fetch('/api/confirm-ledger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ledgerId, confirmTxid: txid, callerUsername: currentUser.username })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ تم تأكيد التحويل');
+      loadLedger('all');
+    } else {
+      showToast(data.error || 'خطأ في التأكيد');
+      input.disabled = false;
+    }
+  } catch(e) {
+    showToast('خطأ في الاتصال');
+    input.disabled = false;
+  }
+};
+
+// ===== REAL-TIME BOOKING LISTENER (onSnapshot) =====
+let _bookingUnsubscribe = null;
+
+function startBookingListener() {
+  if (!currentUser || !isOwner) return;
+  if (_bookingUnsubscribe) _bookingUnsubscribe(); // إلغاء أي listener سابق
+
+  let initialized = false;
+  const q = query(
+    collection(db, 'bookings'),
+    where('salonId', '==', currentUser.username),
+    where('status', '==', 'pending')
+  );
+
+  _bookingUnsubscribe = onSnapshot(q, (snap) => {
+    if (!initialized) {
+      initialized = true;
+      return; // تجاهل البيانات الموجودة عند البداية
+    }
+    snap.docChanges().forEach(change => {
+      if (change.type === 'added') {
+        const b = change.doc.data();
+        const name = b.userId || b.user || 'زبون';
+        const service = b.serviceName || b.service || '';
+        showToast(`🔔 حجز جديد من @${name}${service ? ' — ' + service : ''}`);
+        // إذا كانت لوحة التحكم مفتوحة — حدّثها فوراً
+        if (document.getElementById('owner-page')?.classList.contains('active')) {
+          loadOwnerDashboard();
+        }
+      }
+    });
+  }, (err) => {
+    console.warn('booking listener error:', err.message);
+  });
+}
+
+function waitForPiSDK(timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    if (window.Pi && typeof window.Pi.init === 'function') {
+      return resolve();
+    }
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (window.Pi && typeof window.Pi.init === 'function') {
+        clearInterval(interval);
+        resolve();
+      } else if (Date.now() - start > timeout) {
+        clearInterval(interval);
+        reject(new Error('Pi SDK timeout'));
+      }
+    }, 100);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    setSplashMsg('جاري تحميل Pi SDK...');
+    await waitForPiSDK(8000);
+    setSplashMsg('جاري الاتصال بـ Pi Network...');
+    await initPi();
+  } catch(e) {
+    console.error('Auto-init failed:', e.message);
+    if (e.message === 'Pi SDK timeout') {
+      setSplashMsg('');
+      // أظهر splash مع رسالة واضحة
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.innerHTML = `
+          <div style="font-size:48px;font-weight:900;color:#fff;font-family:'Cairo',sans-serif;">ZAYN <span style="color:#0ABFA3;">PI</span></div>
+          <div style="color:rgba(255,255,255,0.7);font-family:'Cairo',sans-serif;font-size:15px;text-align:center;padding:0 30px;line-height:1.8;">
+            ⚠️ يجب فتح التطبيق من داخل<br>
+            <strong style="color:#0ABFA3;">Pi Browser</strong><br>
+            وليس من متصفح عادي
+          </div>
+          <div style="margin-top:10px;color:rgba(255,255,255,0.4);font-family:'Cairo',sans-serif;font-size:12px;text-align:center;padding:0 20px;">
+            افتح تطبيق Pi Network ← Pi Browser ← اكتب رابط التطبيق
+          </div>
+        `;
+      }
+    } else {
+      hideSplash();
+    }
+  }
+});
 
 </script>
 </body>
