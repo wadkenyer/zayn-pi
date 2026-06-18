@@ -2516,39 +2516,34 @@ window.deleteService = async (idx) => {
 // ===== CANCEL BOOKING =====
 window.cancelBooking = async (bookingId, dateTime, amount) => {
   try {
-    // 1. استشر السيرفر عن سياسة الاسترداد
-    const res = await fetch('/api/cancel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bookingId,
-        user: currentUser.username,
-        bookingDateTime: dateTime,
-        amount
-      })
-    });
+    // حساب سياسة الاسترداد محلياً (نفس منطق الباك إند)
+    const hoursLeft = (new Date(dateTime) - new Date()) / (1000 * 60 * 60);
+    const refundPolicy = hoursLeft >= 24 ? 'full_refund' : hoursLeft >= 2 ? 'partial_refund' : 'no_refund';
+    const refundAmount = refundPolicy === 'full_refund' ? amount :
+                         refundPolicy === 'partial_refund' ? +(amount * 0.5).toFixed(2) : 0;
+    const msg = refundPolicy === 'full_refund'
+      ? `✅ سيتم استرداد ${refundAmount} Pi كاملاً`
+      : refundPolicy === 'partial_refund'
+      ? `⚠️ سيتم استرداد 50% فقط (${refundAmount} Pi) — الإلغاء أقل من 24 ساعة`
+      : `❌ لا استرداد — الإلغاء أقل من ساعتين من الموعد`;
 
-    const data = await res.json();
-    if (!data.success) return showToast('خطأ في الإلغاء');
-
-    // 2. أظهر رسالة السياسة للمستخدم
-    const confirmed = confirm(`${data.message}\n\nهل تريد المتابعة؟`);
+    const confirmed = confirm(`${msg}\n\nهل تريد المتابعة؟`);
     if (!confirmed) return;
 
-    // 3. حدّث الحجز عبر API
-    await fetch('/api/update-booking', {
+    // تحديث الحجز مباشرة
+    const updateRes = await fetch('/api/update-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bookingId, action: 'cancel', callerUsername: currentUser.username })
     });
+    const updateData = await updateRes.json();
+    if (!updateData.success) return showToast(updateData.error || 'خطأ في الإلغاء');
 
-    // 4. أظهر نتيجة واحدّث الواجهة
-    showToast(data.refundPolicy === 'no_refund'
+    showToast(refundPolicy === 'no_refund'
       ? '🚫 تم الإلغاء — لا استرداد'
-      : `✅ تم الإلغاء — سيتم استرداد ${data.refundAmount} Pi`
+      : `✅ تم الإلغاء — سيتم استرداد ${refundAmount} Pi`
     );
 
-    // إخفاء كارد الحجز
     const card = document.getElementById(`booking-${bookingId}`);
     if (card) {
       card.style.opacity = '0.5';
