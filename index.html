@@ -1106,7 +1106,7 @@
     <div class="loyalty-bar-bg">
       <div class="loyalty-bar-fill" id="loyalty-bar" style="width: 0%"></div>
     </div>
-    <div class="loyalty-hint" id="loyalty-hint">أكمل 10 حجوزات واحصل على 0.5 Pi مجاناً</div>
+    <div class="loyalty-hint" id="loyalty-hint">أكمل 10 حجوزات واحصل على خصم في حجزك القادم</div>
   </div>
 
   <button class="owner-toggle-btn" onclick="openOwnerSection()">
@@ -2118,7 +2118,7 @@ async function loadBookings() {
     document.getElementById('loyalty-bar').style.width = pct + '%';
     const remaining = 10 - (count % 10);
     document.getElementById('loyalty-hint').textContent =
-      remaining === 10 ? '🎉 تهانينا! تم ربح 0.5 Pi' : `${remaining} حجوزات متبقية للحصول على 0.5 Pi`;
+      remaining === 10 ? '🎉 تهانينا! مستحق خصم في حجزك القادم — تواصل مع الصالون' : `${remaining} حجوزات متبقية للحصول على خصم`;
 
   } catch (e) {
     list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>خطأ في التحميل</p></div>`;
