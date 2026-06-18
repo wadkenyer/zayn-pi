@@ -1015,25 +1015,25 @@
   }
   .stats-card-title { font-weight: 700; font-size: 14px; color: var(--dark); margin-bottom: 12px; }
   .chart-wrap { position: relative; height: 220px; }
+
+  /* ===== LEDGER ===== */
+  .ledger-card { background:var(--card-bg); border-radius:14px; padding:14px 16px; margin-bottom:10px; box-shadow:0 2px 10px rgba(0,0,0,0.06); }
+  .ledger-card.payout { border-right:4px solid var(--teal); }
+  .ledger-card.refund { border-right:4px solid #F59E0B; }
+  .ledger-card.completed { opacity:0.55; border-right-color:var(--border); }
+  .ledger-amount { font-size:22px; font-weight:900; color:var(--teal); }
+  .ledger-meta { font-size:12px; color:var(--gray); margin-top:3px; line-height:1.6; }
+  .ledger-due { font-size:11px; color:#ef4444; font-weight:700; }
+  .confirm-txid-row { display:flex; gap:8px; margin-top:10px; }
+  .confirm-txid-row input { flex:1; padding:10px 12px; border:2px solid var(--border); border-radius:10px; font-family:'Cairo',sans-serif; font-size:13px; outline:none; }
+  .confirm-txid-row input:focus { border-color:var(--teal); }
+  .confirm-btn-small { padding:10px 16px; background:var(--teal); color:#fff; border:none; border-radius:10px; font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .refund-status-tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; margin-top:6px; }
+  .refund-pending { background:#FEF3C7; color:#92400E; }
+  .refund-done { background:#D1FAE5; color:#065F46; }
 </style>
 </head>
 <body>
-
-<!-- ===== SPLASH SCREEN ===== -->
-<div id="splash-screen" style="
-  position:fixed;inset:0;z-index:99999;
-  background:linear-gradient(135deg,#0F1923 0%,#0d2233 100%);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
-">
-  <div style="font-size:48px;font-weight:900;color:#fff;font-family:'Cairo',sans-serif;letter-spacing:-1px;">
-    ZAYN <span style="color:#0ABFA3;">PI</span>
-  </div>
-  <div id="splash-msg" style="color:rgba(255,255,255,0.6);font-family:'Cairo',sans-serif;font-size:14px;">
-    جاري الاتصال بـ Pi Network...
-  </div>
-  <div style="width:40px;height:40px;border:3px solid rgba(255,255,255,0.15);border-top-color:#0ABFA3;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-</div>
 
 <!-- ===== HOME PAGE ===== -->
 <div id="home-page" class="page active">
@@ -1041,7 +1041,7 @@
     <div class="header-top">
       <div class="logo">ZAYN <span>PI</span></div>
       <div id="auth-area">
-        <button class="pi-btn" id="pi-login-btn" onclick="initPi()">
+        <button class="pi-btn" onclick="initPi()">
           <i class="fas fa-circle" style="color:#F5C842;font-size:8px"></i> دخول بـ Pi
         </button>
       </div>
@@ -1115,6 +1115,13 @@
   </button>
 
   <div style="padding: 0 20px;">
+    <button id="admin-ledger-btn" onclick="switchPage('admin-page', null)"
+      style="display:none;width:100%;margin-top:10px;padding:14px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:700;font-size:15px;cursor:pointer;">
+      <i class="fas fa-table"></i> لوحة Admin — الدفعات والاستردادات
+    </button>
+  </div>
+
+  <div style="padding: 0 20px;">
     <button onclick="initPi()" class="confirm-btn" id="profile-login-btn">
       تسجيل الدخول بـ Pi
     </button>
@@ -1135,15 +1142,6 @@
     </div>
   </div>
 
-  <!-- Owner Tabs -->
-  <div class="owner-tabs">
-    <div class="owner-tab active" id="owner-tab-main" onclick="switchOwnerTab('main')">🏠 الرئيسية</div>
-    <div class="owner-tab" id="owner-tab-calendar" onclick="switchOwnerTab('calendar')">📅 التقويم</div>
-    <div class="owner-tab" id="owner-tab-stats" onclick="switchOwnerTab('stats')">📊 إحصائيات</div>
-  </div>
-
-  <!-- TAB: Main -->
-  <div id="owner-tab-content-main">
   <div id="owner-dashboard">
     <!-- Revenue Card -->
     <div class="revenue-card">
@@ -1204,11 +1202,6 @@
       <div class="form-group">
         <label class="form-label">صورة الصالون</label>
         <input type="url" class="form-input" id="edit-salon-img" placeholder="https://... رابط صورة مباشر">
-        <div style="font-size:11px;color:var(--gray);margin-top:5px;line-height:1.6;">
-          ⚠️ يجب أن ينتهي الرابط بـ <b>.jpg</b> أو <b>.png</b><br>
-          ❌ روابط Google Photos لا تعمل<br>
-          ✅ استخدم <a href="https://imgur.com" target="_blank" style="color:var(--teal);">imgur.com</a> — ارفع الصورة واختر "Direct Link"
-        </div>
       </div>
       <div class="form-group">
         <label class="form-label">أوقات العمل</label>
@@ -1265,49 +1258,24 @@
     <div class="section-title">آخر الحجوزات</div>
     <div id="owner-recent-bookings" style="padding: 0 20px;"></div>
   </div>
-  </div><!-- end owner-tab-content-main -->
-
-  <!-- TAB: Calendar -->
-  <div id="owner-tab-content-calendar" style="display:none;">
-    <div class="cal-header">
-      <button class="cal-nav-btn" onclick="calPrev()">›</button>
-      <span id="cal-month-label"></span>
-      <button class="cal-nav-btn" onclick="calNext()">‹</button>
-    </div>
-    <div class="cal-grid" id="cal-day-names"></div>
-    <div class="cal-grid" id="cal-grid"></div>
-    <div class="cal-detail" id="cal-detail">
-      <p style="color:var(--gray);font-size:13px;text-align:center;">اضغط على يوم لرؤية الحجوزات</p>
-    </div>
-  </div>
-
-  <!-- TAB: Stats -->
-  <div id="owner-tab-content-stats" style="display:none;">
-    <div class="stats-section">
-      <div class="stats-card">
-        <div class="stats-card-title">توزيع حالات الحجوزات</div>
-        <div class="chart-wrap"><canvas id="chart-pie"></canvas></div>
-      </div>
-      <div class="stats-card">
-        <div class="stats-card-title">إيرادات آخر 7 أيام (Pi)</div>
-        <div class="chart-wrap"><canvas id="chart-bar"></canvas></div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<!-- ===== NOTIFICATIONS PAGE ===== -->
-<div id="notifications-page" class="page">
+<!-- ===== ADMIN LEDGER PAGE ===== -->
+<div id="admin-page" class="page">
   <div class="app-header">
     <div class="header-top">
       <div class="logo">ZAYN <span>PI</span></div>
-      <button onclick="markAllRead()" style="background:none;border:none;color:var(--teal);font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">تحديد كمقروء</button>
+      <span style="color:rgba(255,255,255,0.6);font-size:12px;font-weight:700;">🔐 Admin</span>
     </div>
   </div>
   <div class="page-content">
-    <div id="notif-list">
-      <div class="empty-state"><i class="fas fa-bell-slash"></i><p>لا توجد إشعارات</p></div>
+    <div style="display:flex;gap:8px;padding:0 20px 16px;flex-wrap:wrap;">
+      <button onclick="loadLedger('all')" id="ledger-btn-all" style="flex:1;padding:8px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">الكل</button>
+      <button onclick="loadLedger('payout_to_salon')" id="ledger-btn-payout" style="flex:1;padding:8px;background:var(--card-bg);color:var(--dark);border:2px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">مستحقات صالونات</button>
+      <button onclick="loadLedger('refund_to_customer')" id="ledger-btn-refund" style="flex:1;padding:8px;background:var(--card-bg);color:var(--dark);border:2px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">استردادات زبائن</button>
+    </div>
+    <div id="admin-ledger-list" style="padding:0 20px;">
+      <div class="empty-state"><i class="fas fa-circle-notch fa-spin"></i></div>
     </div>
   </div>
 </div>
@@ -1321,13 +1289,6 @@
   <div class="nav-item" id="nav-bookings" onclick="switchPage('bookings-page', 'nav-bookings')">
     <i class="fas fa-calendar-check"></i>
     <span>حجوزاتي</span>
-  </div>
-  <div class="nav-item" id="nav-notifs" onclick="switchPage('notifications-page', 'nav-notifs')">
-    <div class="nav-item-wrap">
-      <i class="fas fa-bell"></i>
-      <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
-    </div>
-    <span>إشعارات</span>
   </div>
   <div class="nav-item" id="nav-profile" onclick="switchPage('profile-page', 'nav-profile')">
     <i class="fas fa-user"></i>
@@ -1414,11 +1375,6 @@
       <div class="form-group">
         <label class="form-label">صورة الصالون</label>
         <input type="url" class="form-input" id="reg-salon-img" placeholder="https://... رابط صورة مباشر">
-        <div style="font-size:11px;color:var(--gray);margin-top:5px;line-height:1.6;">
-          ⚠️ يجب أن ينتهي الرابط بـ <b>.jpg</b> أو <b>.png</b><br>
-          ❌ روابط Google Photos لا تعمل<br>
-          ✅ استخدم <a href="https://imgur.com" target="_blank" style="color:var(--teal);">imgur.com</a> — ارفع الصورة واختر "Direct Link"
-        </div>
         <div style="font-size:11px;color:var(--gray);margin-top:4px;">اتركه فارغاً لصورة افتراضية</div>
       </div>
       <div class="form-group">
@@ -1471,17 +1427,17 @@
 
     <div class="form-group">
       <label class="form-label">اسم الخدمة</label>
-      <input type="text" class="form-input" id="svc-name" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="مثال: قص شعر، لحية، صبغة...">
+      <input type="text" class="form-input" id="svc-name" placeholder="مثال: قص شعر، لحية، صبغة...">
     </div>
 
     <div class="form-group">
       <label class="form-label">المدة (دقيقة)</label>
-      <input type="text" class="form-input" id="svc-duration" inputmode="numeric" autocomplete="off" placeholder="30">
+      <input type="number" class="form-input" id="svc-duration" placeholder="30">
     </div>
 
     <div class="form-group">
       <label class="form-label">السعر (Pi)</label>
-      <input type="text" class="form-input" id="svc-price" inputmode="decimal" autocomplete="off" placeholder="0.5">
+      <input type="number" class="form-input" id="svc-price" placeholder="0.5" step="0.1">
     </div>
 
     <div style="display:flex;gap:10px;">
@@ -1527,8 +1483,8 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, getDocs, doc, updateDoc, setDoc, getDoc,
-  serverTimestamp, query, where, onSnapshot
+  getFirestore, collection, getDocs, doc, getDoc,
+  query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, signInWithCustomToken, signInAnonymously
@@ -1551,6 +1507,7 @@ const clean = (str) => (typeof DOMPurify !== 'undefined')
 
 // ===== STATE =====
 let currentUser = null;
+let piAccessToken = null;
 let currentGender = 'men';
 let selectedSalon = null;
 let selectedService = null;
@@ -1882,10 +1839,13 @@ window.confirmBooking = async () => {
     });
     const slotData = await slotCheck.json();
     if (!slotData.available) {
+      if (confirmBtn) confirmBtn.disabled = false;
       return showToast('❌ هذا الوقت محجوز — اختر وقتاً آخر');
     }
   } catch(e) {
-    console.log('slot check skipped:', e.message);
+    console.warn('slot check failed:', e.message);
+    if (confirmBtn) confirmBtn.disabled = false;
+    return showToast('⚠️ تعذّر التحقق من الوقت، حاول مرة أخرى');
   }
 
   const total = +(selectedService.price + 0.1).toFixed(1);
@@ -2003,17 +1963,15 @@ async function loadBookings() {
       return;
     }
 
-    const sortedDocs = [...apiData.bookings].sort((a, b) => {
-      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return tb - ta;
+    const sortedBookings = apiData.bookings.sort((a, b) => {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
 
     let totalPi = 0;
     let count = 0;
     let html = '';
 
-    for (const b of sortedDocs) {
+    for (const b of sortedBookings) {
       const docId = b.id;
       count++;
       totalPi += b.servicePrice || 0;
@@ -2022,7 +1980,7 @@ async function loadBookings() {
       const isRejected = b.status === 'rejected';
       const bookingTime = new Date(b.dateTime);
       const hoursLeft = (bookingTime - new Date()) / (1000 * 60 * 60);
-      const canCancel = !isCancelled && !isRejected && b.status !== 'checkedin' && b.status !== 'completed' && hoursLeft > 0;
+      const canCancel = !isCancelled && !isRejected && hoursLeft > 0;
       const showCode = !isCancelled && !isRejected && b.status !== 'checkedin';
 
       const checkInCode = b.checkInCode || '';
@@ -2083,6 +2041,8 @@ async function loadBookings() {
           <div style="font-size:11px;color:#bbb;margin-top:8px;">
             TX: ${b.txid ? b.txid.substring(0,16) : 'sandbox'}...
           </div>
+          ${isCancelled && b.refundStatus === 'pending' ? `<span class="refund-status-tag refund-pending">⏳ استرداد قيد المعالجة</span>` : ''}
+          ${isCancelled && b.refundStatus === 'completed' ? `<span class="refund-status-tag refund-done">✅ تم الاسترداد — TX: ${b.refundTxid ? b.refundTxid.substring(0,14) + '...' : '—'}</span>` : ''}
           ${canCancel ? `
           <button onclick="cancelBooking('${docId}', '${b.dateTime}', ${b.total || b.amount})"
             style="margin-top:12px;width:100%;padding:10px;border:2px solid #ef4444;border-radius:12px;
@@ -2168,24 +2128,20 @@ window.registerSalon = async () => {
 
     await Pi.createPayment(paymentData, {
       onReadyForServerApproval: async (paymentId) => {
-        const r = await fetch('/api/approve', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId}) });
-        if (!r.ok) throw new Error('Approve failed');
+        try { await fetch('/api/approve', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId}) }); } catch(e) {}
       },
       onReadyForServerCompletion: async (paymentId, txid) => {
-        await fetch('/api/complete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId, txid}) });
+        try { await fetch('/api/complete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({paymentId, txid}) }); } catch(e) {}
 
-        // حفظ الصالون عبر Admin SDK
-        const regRes = await fetch('/api/save-salon', {
+        await fetch('/api/save-salon', {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ownerUsername: currentUser.username,
             action: 'register',
             data: { name, city, gender, img, phone, desc, openTime, closeTime, txid }
           })
         });
-        const regData = await regRes.json();
-        if (!regData.success) throw new Error(regData.error || 'فشل حفظ الصالون');
 
         isOwner = true;
         ownerSalonData = { name, city, gender, img, phone, desc, openTime, closeTime, available: true, services: [], revenue: 0 };
@@ -2193,7 +2149,10 @@ window.registerSalon = async () => {
 
         closeModal('register-owner-modal');
         showToast(`🎉 تم تسجيل ${name} بنجاح!`);
+        
+        // تحديث قائمة الصالونات فوراً
         await loadSalons();
+        
         switchPage('owner-page', null);
         loadOwnerDashboard();
       },
@@ -2231,21 +2190,22 @@ async function loadOwnerDashboard() {
     if (ownerSalonData.closeTime) document.getElementById('edit-close-time').value = ownerSalonData.closeTime;
 
     // ===== حجوزات معلقة تنتظر القبول =====
-    const pendingRes = await fetch('/api/get-bookings', {
+    const pendingApiRes = await fetch('/api/get-bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: currentUser.username, type: 'salon-pending' })
     });
-    const pendingData = await pendingRes.json();
-    const pendingBookings = pendingData.bookings || [];
+    const pendingApiData = await pendingApiRes.json();
+    const pendingBookings = pendingApiData.bookings || [];
     let pendingCount = 0;
     let pendingHtml = '';
 
-    pendingBookings.forEach(b => {
-      const d = { id: b.id, data: () => b };
+    pendingBookings.forEach(d => {
+      const b = d;
+      b.id = d.id;
       pendingCount++;
       pendingHtml += `
-        <div class="pending-booking-item" id="pending-${d.id}">
+        <div class="pending-booking-item" id="pending-${b.id}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
               <div style="font-weight:900;font-size:15px;">@${b.userId || b.user}</div>
@@ -2259,10 +2219,10 @@ async function loadOwnerDashboard() {
             <span class="status-badge status-pending">⏳ انتظار</span>
           </div>
           <div class="pending-actions">
-            <button class="accept-btn" onclick="acceptBooking('${d.id}', '${b.userId || b.user}', '${b.serviceName || b.service || ''}', '${b.dateTime || ''}', '')">
+            <button class="accept-btn" onclick="acceptBooking('${b.id}', '${b.userId || b.user}', '${b.serviceName || b.service || ''}', '${b.dateTime || ''}', '')">
               ✅ قبول
             </button>
-            <button class="reject-btn" onclick="rejectBooking('${d.id}')">
+            <button class="reject-btn" onclick="rejectBooking('${b.id}')">
               ❌ رفض
             </button>
           </div>
@@ -2276,14 +2236,13 @@ async function loadOwnerDashboard() {
     }
 
     // ===== كل الحجوزات =====
-    const allRes = await fetch('/api/get-bookings', {
+    const allApiRes = await fetch('/api/get-bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: currentUser.username, type: 'salon' })
     });
-    const allData = await allRes.json();
-    const allBookings = allData.bookings || [];
-    ownerAllBookingsCache = allBookings;
+    const allApiData = await allApiRes.json();
+    const allBookingsArr = (allApiData.bookings || []).sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0)).slice(0,30);
 
     let revenue = 0;
     let todayCount = 0;
@@ -2291,7 +2250,7 @@ async function loadOwnerDashboard() {
     let recentHtml = '';
     let completedCount = 0;
 
-    allBookings.forEach(b => {
+    allBookingsArr.forEach(b => {
       if (b.status === 'completed') {
         revenue += b.servicePrice || 0;
         completedCount++;
@@ -2374,13 +2333,13 @@ function renderOwnerServices() {
 // ===== قبول الحجز =====
 window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhone) => {
   try {
-    const res = await fetch('/api/update-booking', {
+    const r = await fetch('/api/update-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bookingId, action: 'accept', callerUsername: currentUser.username })
     });
-    const data = await res.json();
-    if (!data.success) return showToast(data.error || 'خطأ في القبول');
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ: ' + (d.error || 'فشل القبول'));
     showToast('✅ تم قبول الحجز');
     loadOwnerDashboard();
   } catch(e) {
@@ -2392,13 +2351,13 @@ window.acceptBooking = async (bookingId, userId, serviceName, dateTime, userPhon
 window.rejectBooking = async (bookingId) => {
   const reason = prompt('سبب الرفض (اختياري):') || 'ظرف طارئ';
   try {
-    const res = await fetch('/api/update-booking', {
+    const r = await fetch('/api/update-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bookingId, action: 'reject', callerUsername: currentUser.username, reason })
     });
-    const data = await res.json();
-    if (!data.success) return showToast(data.error || 'خطأ');
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ: ' + (d.error || 'فشل الرفض'));
     showToast('تم رفض الحجز');
     loadOwnerDashboard();
   } catch(e) {
@@ -2412,7 +2371,7 @@ window.verifyCheckIn = async () => {
   if (!/^\d{6}$/.test(code)) return showToast('الكود يجب أن يكون 6 أرقام فقط');
 
   try {
-    const res = await fetch('/api/update-booking', {
+    const r = await fetch('/api/update-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2422,12 +2381,17 @@ window.verifyCheckIn = async () => {
         checkInCode: code
       })
     });
-    const data = await res.json();
+    const d = await r.json();
 
-    if (!data.success) return showToast(data.error || '❌ كود غير صحيح');
+    if (!d.success) {
+      return showToast(d.alreadyCheckedIn
+        ? `⚠️ ${d.error}`
+        : `❌ ${d.error || 'كود غير صحيح'}`
+      );
+    }
 
     document.getElementById('qr-input-field').value = '';
-    showToast(`✅ تم تسجيل حضور @${data.customerName} — ${data.serviceName}`);
+    showToast(`✅ تم تسجيل حضور @${d.customerName} — ${d.serviceName}`);
     loadOwnerDashboard();
   } catch(e) {
     showToast('خطأ في التحقق');
@@ -2450,11 +2414,16 @@ window.toggleAvailability = async () => {
 
   try {
     const r = await fetch('/api/save-salon', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ownerUsername: currentUser.username, action: 'toggle-availability', data: {} })
     });
     const d = await r.json();
-    salonAvailable = d.available ?? salonAvailable;
+    if (d.success) {
+      salonAvailable = d.available;
+      if (salonAvailable) { toggle.classList.add('on'); label.textContent = '🟢 متاح الآن'; }
+      else { toggle.classList.remove('on'); label.textContent = '🔴 مشغول الآن'; }
+    }
     showToast(salonAvailable ? 'الصالون الآن متاح ✓' : 'تم التحديث: مشغول الآن');
   } catch(e) {
     showToast('تحقق من الاتصال');
@@ -2484,11 +2453,12 @@ window.updateSalonData = async () => {
 
   try {
     const r = await fetch('/api/save-salon', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-settings', data: updates })
     });
     const d = await r.json();
-    if (!d.success) return showToast(d.error || 'خطأ في الحفظ');
+    if (!d.success) return showToast('خطأ في الحفظ: ' + (d.error || ''));
     showToast('✅ تم حفظ التعديلات');
     loadSalons();
     ownerSalonData = { ...ownerSalonData, ...updates };
@@ -2503,11 +2473,6 @@ window.openAddServiceModal = () => {
   document.getElementById('svc-duration').value = '';
   document.getElementById('svc-price').value = '';
   openModal('add-service-modal');
-  setTimeout(() => {
-    const el = document.getElementById('svc-name');
-    el.focus();
-    el.click();
-  }, 350);
 };
 
 window.saveService = async () => {
@@ -2521,34 +2486,31 @@ window.saveService = async () => {
 
   try {
     const r = await fetch('/api/save-salon', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-services', data: { services: ownerServices } })
     });
     const d = await r.json();
-    if (!d.success) { ownerServices.pop(); return showToast(d.error || 'خطأ في الحفظ'); }
+    if (!d.success) return showToast('خطأ في الحفظ');
     closeModal('add-service-modal');
     renderOwnerServices();
     showToast('✓ تم إضافة الخدمة');
   } catch(e) {
-    ownerServices.pop();
     showToast('خطأ في الحفظ');
   }
 };
 
 window.deleteService = async (idx) => {
-  const removed = ownerServices.splice(idx, 1);
+  ownerServices.splice(idx, 1);
   try {
-    const r = await fetch('/api/save-salon', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+    await fetch('/api/save-salon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-services', data: { services: ownerServices } })
     });
-    const d = await r.json();
-    if (!d.success) { ownerServices.splice(idx, 0, ...removed); return showToast('خطأ في الحذف'); }
     renderOwnerServices();
     showToast('تم حذف الخدمة');
-  } catch(e) {
-    ownerServices.splice(idx, 0, ...removed);
-  }
+  } catch(e) {}
 };
 
 // ===== CANCEL BOOKING =====
@@ -2573,14 +2535,12 @@ window.cancelBooking = async (bookingId, dateTime, amount) => {
     const confirmed = confirm(`${data.message}\n\nهل تريد المتابعة؟`);
     if (!confirmed) return;
 
-    // 3. حدّث الحجز في Firebase كـ cancelled عبر API
-    const updateRes = await fetch('/api/update-booking', {
+    // 3. حدّث الحجز عبر API
+    await fetch('/api/update-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bookingId, action: 'cancel', callerUsername: currentUser.username })
     });
-    const updateData = await updateRes.json();
-    if (!updateData.success) return showToast('خطأ في الإلغاء');
 
     // 4. أظهر نتيجة واحدّث الواجهة
     showToast(data.refundPolicy === 'no_refund'
@@ -2605,11 +2565,6 @@ window.cancelBooking = async (bookingId, dateTime, amount) => {
 
 // ===== PI AUTH =====
 window.initPi = async () => {
-  const loginBtn = document.getElementById('pi-login-btn');
-  if (loginBtn) {
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="color:#F5C842;font-size:8px"></i> جاري الاتصال...';
-  }
   try {
     await Pi.init({ version: "2.0", sandbox: false });
     console.log('✅ Pi SDK initialized');
@@ -2619,7 +2574,7 @@ window.initPi = async () => {
         try {
           const txid = payment.transaction?.txid;
           if (txid) {
-            // المعاملة على الـ blockchain اكتملت لكن السيرفر لم يُكملها
+            // المعاملة على الـ blockchain اكتملت لكن السيرفر لم يُكملها بعد
             await fetch('/api/complete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2641,6 +2596,7 @@ window.initPi = async () => {
       }
     });
     currentUser = auth.user;
+    piAccessToken = auth.accessToken;
 
     // ===== تسجيل دخول Firebase بتوكن مشتق من Pi =====
     let fbAuthOk = false;
@@ -2681,6 +2637,9 @@ window.initPi = async () => {
     document.getElementById('profile-name').textContent = currentUser.username;
     document.getElementById('profile-status').textContent = '✓ متصل بـ Pi Network';
     document.getElementById('profile-login-btn').style.display = 'none';
+    if (currentUser.username === ADMIN_USERNAME) {
+      document.getElementById('admin-ledger-btn').style.display = 'block';
+    }
 
     // Check if owner
     try {
@@ -2689,27 +2648,13 @@ window.initPi = async () => {
         isOwner = true;
         ownerSalonData = salonSnap.data();
         ownerServices = ownerSalonData.services || [];
-        startBookingListener();
       }
     } catch(e) {}
 
-    hideSplash();
     showToast(`مرحباً ${currentUser.username}!`);
     loadBookings();
-    loadNotifications();
   } catch(e) {
-    console.error('initPi error:', e);
-    hideSplash();
-    if (loginBtn) {
-      loginBtn.disabled = false;
-      loginBtn.innerHTML = '<i class="fas fa-circle" style="color:#F5C842;font-size:8px"></i> دخول بـ Pi';
-    }
-    if (!window.Pi) {
-      showToast('افتح التطبيق داخل Pi Browser');
-    } else {
-      showToast('خطأ في الاتصال — اضغط للمحاولة مجدداً');
-    }
-    throw e;
+    showToast('افتح التطبيق داخل Pi Browser');
   }
 };
 
@@ -2726,6 +2671,7 @@ window.switchPage = (pageId, navId) => {
 
   if (pageId === 'bookings-page') loadBookings();
   if (pageId === 'notifications-page') loadNotifications();
+  if (pageId === 'admin-page') loadLedger('all');
 };
 
 // ===== MODAL HELPERS =====
@@ -2768,8 +2714,8 @@ window.submitReview = async () => {
   const comment = document.getElementById('review-comment').value.trim();
 
   try {
-    // 1. حدّث الحجز كـ isReviewed عبر API
-    const reviewRes = await fetch('/api/update-booking', {
+    // 1. حدّث الحجز عبر API
+    const rb = await fetch('/api/update-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2780,22 +2726,20 @@ window.submitReview = async () => {
         reviewComment: comment
       })
     });
-    const reviewData = await reviewRes.json();
-    if (!reviewData.success) throw new Error(reviewData.error);
+    const rd = await rb.json();
+    if (!rd.success) return showToast('خطأ في التقييم');
 
     // 2. حدّث تقييم الصالون عبر API
     if (_reviewSalonId) {
-      try {
-        await fetch('/api/save-salon', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ownerUsername: _reviewSalonId,
-            action: 'update-rating',
-            data: { stars: _selectedStars }
-          })
-        });
-      } catch(e) {}
+      fetch('/api/save-salon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerUsername: _reviewSalonId,
+          action: 'update-rating',
+          data: { stars: _selectedStars }
+        })
+      }).catch(() => {});
     }
 
     closeModal('review-modal');
@@ -3078,6 +3022,115 @@ async function renderOwnerStats() {
     });
   }
 }
+
+// ===== LEDGER (Admin + صالون + زبون) =====
+const ADMIN_USERNAME = 'wadkenyer'; // لإظهار زر الواجهة فقط — الأمان الحقيقي في الباك إند عبر Pi token
+
+async function loadLedger(filterType = 'all') {
+  const list = document.getElementById('admin-ledger-list');
+  if (!list || !currentUser) return;
+
+  // تحديث أزرار الفلتر
+  ['all','payout_to_salon','refund_to_customer'].forEach(t => {
+    const btn = document.getElementById(`ledger-btn-${t === 'all' ? 'all' : t === 'payout_to_salon' ? 'payout' : 'refund'}`);
+    if (btn) {
+      const isActive = t === filterType;
+      btn.style.background = isActive ? 'var(--teal)' : 'var(--card-bg)';
+      btn.style.color = isActive ? '#fff' : 'var(--dark)';
+    }
+  });
+
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--gray);"><i class="fas fa-circle-notch fa-spin" style="font-size:24px;"></i></div>`;
+
+  try {
+    const body = { callerUsername: currentUser.username };
+    if (filterType !== 'all') body.filterType = filterType;
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (piAccessToken) headers['x-pi-token'] = piAccessToken;
+
+    const res = await fetch('/api/get-ledger', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (!data.success || !data.entries?.length) {
+      list.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--teal)"></i><p>لا توجد التزامات معلقة</p></div>`;
+      return;
+    }
+
+    list.innerHTML = data.entries.map(e => renderLedgerCard(e, data.isAdmin)).join('');
+  } catch(err) {
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>تعذر التحميل</p></div>`;
+  }
+}
+
+function renderLedgerCard(e, isAdmin) {
+  const isPayout = e.type === 'payout_to_salon';
+  const isDone   = e.status === 'completed';
+  const typeLabel = isPayout ? '💰 مستحق للصالون' : '↩️ استرداد للزبون';
+  const typeClass = isPayout ? 'payout' : 'refund';
+  const dueDate  = e.dueBy ? new Date(e.dueBy).toLocaleDateString('ar-EG', {day:'numeric',month:'short'}) : '';
+  const isOverdue = e.dueBy && !isDone && new Date(e.dueBy) < new Date();
+
+  const confirmRow = (isAdmin && !isDone) ? `
+    <div class="confirm-txid-row">
+      <input type="text" inputmode="text" placeholder="أدخل txid المعاملة من Pi" id="txid-${e.id}" autocomplete="off">
+      <button class="confirm-btn-small" onclick="confirmLedger('${e.id}')">تأكيد ✓</button>
+    </div>` : '';
+
+  const doneRow = isDone ? `<div style="font-size:11px;color:#065F46;margin-top:6px;font-weight:700;">✅ مكتمل — TX: ${e.confirmTxid?.substring(0,16) || ''}...</div>` : '';
+
+  return `
+    <div class="ledger-card ${typeClass} ${isDone ? 'completed' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${isPayout ? 'var(--teal)' : '#F59E0B'};margin-bottom:4px;">${typeLabel}</div>
+          <div class="ledger-amount">${e.amountOwed} Pi</div>
+          <div class="ledger-meta">
+            ${isPayout ? `🏪 ${clean(e.recipientLabel || '')}` : `👤 ${clean(e.recipientLabel || '')}`}<br>
+            ${isPayout ? `👤 ${clean(e.customerUsername || '')}` : `🏪 ${clean(e.salonName || '')}`}<br>
+            ✂️ ${clean(e.serviceName || '')}
+          </div>
+          ${isOverdue ? `<div class="ledger-due">⚠️ متأخر — كان يجب قبل ${dueDate}</div>` : (dueDate && !isDone ? `<div style="font-size:11px;color:var(--gray);">الموعد: ${dueDate}</div>` : '')}
+        </div>
+        <span style="font-size:11px;background:${isDone ? '#D1FAE5' : '#FEF3C7'};color:${isDone ? '#065F46' : '#92400E'};padding:3px 8px;border-radius:20px;font-weight:700;">${isDone ? 'مكتمل' : 'معلق'}</span>
+      </div>
+      ${confirmRow}
+      ${doneRow}
+    </div>`;
+}
+
+window.confirmLedger = async (ledgerId) => {
+  const input = document.getElementById(`txid-${ledgerId}`);
+  const txid = input?.value?.trim();
+  if (!txid || txid.length < 8) return showToast('أدخل txid صحيح');
+
+  input.disabled = true;
+  try {
+    const res = await fetch('/api/confirm-ledger', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(piAccessToken ? { 'x-pi-token': piAccessToken } : {})
+      },
+      body: JSON.stringify({ ledgerId, confirmTxid: txid })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ تم تأكيد التحويل');
+      loadLedger('all');
+    } else {
+      showToast(data.error || 'خطأ في التأكيد');
+      input.disabled = false;
+    }
+  } catch(e) {
+    showToast('خطأ في الاتصال');
+    input.disabled = false;
+  }
+};
 
 // ===== REAL-TIME BOOKING LISTENER (onSnapshot) =====
 let _bookingUnsubscribe = null;

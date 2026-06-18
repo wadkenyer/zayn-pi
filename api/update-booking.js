@@ -98,12 +98,35 @@ export default async function handler(req, res) {
           });
         }
 
+        // سجل الاسترداد في Ledger إذا كان هناك مبلغ مستحق
+        if (refundAmount > 0) {
+          const refundDue = new Date();
+          refundDue.setDate(refundDue.getDate() + 2); // 48 ساعة
+          await db.collection('ledger').add({
+            type: 'refund_to_customer',
+            recipientUsername: b.userId || b.user,
+            recipientLabel: `@${b.userId || b.user}`,
+            amountOwed: refundAmount,
+            bookingId: snap.id,
+            salonId: b.salonId,
+            salonName: b.salonName || b.salonId,
+            relatedTxid: b.txid || '',
+            refundPolicy,
+            status: 'pending',
+            confirmTxid: null,
+            createdAt: FieldValue.serverTimestamp(),
+            dueBy: refundDue.toISOString(),
+            completedAt: null
+          });
+        }
+
         updates = {
           status: 'cancelled',
           cancelledBy: isOwner ? 'owner' : 'user',
           cancelledAt: FieldValue.serverTimestamp(),
           refundPolicy,
-          refundAmount
+          refundAmount,
+          refundStatus: refundAmount > 0 ? 'pending' : 'not_applicable'
         };
         responseExtra = { refundPolicy, refundAmount };
         break;
@@ -122,6 +145,30 @@ export default async function handler(req, res) {
         }
         updates = { status: 'checkedin', checkedInAt: FieldValue.serverTimestamp() };
         responseExtra = { customerName: b.userId || b.user, serviceName: b.serviceName || b.service, dateTime: b.dateTime };
+
+        // سجل مستحقات الصالون في Ledger
+        const commission = b.commission || 0.1;
+        const serviceAmt = b.servicePrice || b.total || 0;
+        const payoutAmount = parseFloat((serviceAmt - commission).toFixed(2));
+        if (payoutAmount > 0) {
+          const payoutDue = new Date();
+          payoutDue.setDate(payoutDue.getDate() + 2); // 48 ساعة — نافذة شكاوى جودة قبل التحويل
+          await db.collection('ledger').add({
+            type: 'payout_to_salon',
+            recipientUsername: b.salonId,
+            recipientLabel: b.salonName || b.salonId,
+            amountOwed: payoutAmount,
+            bookingId: snap.id,
+            customerUsername: b.userId || b.user,
+            serviceName: b.serviceName || b.service || '',
+            relatedTxid: b.txid || '',
+            status: 'pending',
+            confirmTxid: null,
+            createdAt: FieldValue.serverTimestamp(),
+            dueBy: payoutDue.toISOString(),
+            completedAt: null
+          });
+        }
         break;
       }
 
