@@ -1142,6 +1142,14 @@
     </div>
   </div>
 
+  <!-- Owner Tabs -->
+  <div class="owner-tabs">
+    <div class="owner-tab active" id="owner-tab-main" onclick="switchOwnerTab('main')">🏠 الرئيسية</div>
+    <div class="owner-tab" id="owner-tab-calendar" onclick="switchOwnerTab('calendar')">📅 التقويم</div>
+    <div class="owner-tab" id="owner-tab-stats" onclick="switchOwnerTab('stats')">📊 إحصائيات</div>
+  </div>
+
+  <div id="owner-tab-content-main">
   <div id="owner-dashboard">
     <!-- Revenue Card -->
     <div class="revenue-card">
@@ -1258,6 +1266,47 @@
     <div class="section-title">آخر الحجوزات</div>
     <div id="owner-recent-bookings" style="padding: 0 20px;"></div>
   </div>
+  </div><!-- end owner-tab-content-main -->
+
+  <!-- Calendar Tab -->
+  <div id="owner-tab-content-calendar" style="display:none;">
+    <div class="cal-header">
+      <button class="cal-nav-btn" onclick="calPrev()">›</button>
+      <span id="cal-month-label"></span>
+      <button class="cal-nav-btn" onclick="calNext()">‹</button>
+    </div>
+    <div id="cal-day-names" class="cal-grid"></div>
+    <div id="cal-grid" class="cal-grid"></div>
+    <div id="cal-detail" class="cal-detail"></div>
+  </div>
+
+  <!-- Stats Tab -->
+  <div id="owner-tab-content-stats" style="display:none;">
+    <div class="stats-section">
+      <div class="stats-card">
+        <div class="stats-card-title">توزيع الحجوزات</div>
+        <div class="chart-wrap"><canvas id="chart-pie"></canvas></div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">إيرادات آخر 7 أيام (Pi)</div>
+        <div class="chart-wrap"><canvas id="chart-bar"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== NOTIFICATIONS PAGE ===== -->
+<div id="notifications-page" class="page">
+  <div class="app-header">
+    <div class="header-top">
+      <div class="logo">ZAYN <span>PI</span></div>
+      <button onclick="markAllRead()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;">✓ قراءة الكل</button>
+    </div>
+  </div>
+  <div class="page-content" style="padding:16px 20px;">
+    <div id="notif-list"></div>
+  </div>
 </div>
 
 <!-- ===== ADMIN LEDGER PAGE ===== -->
@@ -1289,6 +1338,11 @@
   <div class="nav-item" id="nav-bookings" onclick="switchPage('bookings-page', 'nav-bookings')">
     <i class="fas fa-calendar-check"></i>
     <span>حجوزاتي</span>
+  </div>
+  <div class="nav-item nav-item-wrap" id="nav-notifs" onclick="switchPage('notifications-page', 'nav-notifs')">
+    <span id="notif-badge" class="notif-badge" style="display:none"></span>
+    <i class="fas fa-bell"></i>
+    <span>إشعارات</span>
   </div>
   <div class="nav-item" id="nav-profile" onclick="switchPage('profile-page', 'nav-profile')">
     <i class="fas fa-user"></i>
