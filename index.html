@@ -2297,6 +2297,7 @@ async function loadOwnerDashboard() {
     });
     const allApiData = await allApiRes.json();
     const allBookingsArr = (allApiData.bookings || []).sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0)).slice(0,30);
+    ownerAllBookingsCache = allBookingsArr; // يُغذّي تبويبَي التقويم والإحصائيات
 
     let revenue = 0;
     let todayCount = 0;
@@ -2494,6 +2495,10 @@ window.updateSalonData = async () => {
   const desc = document.getElementById('edit-salon-desc').value.trim();
   const openTime = document.getElementById('edit-open-time').value;
   const closeTime = document.getElementById('edit-close-time').value;
+
+  if (img && !img.startsWith('https://')) {
+    return showToast('⚠️ رابط الصورة يجب أن يبدأ بـ https://');
+  }
 
   if (name) updates.name = name;
   if (city) updates.city = city;
