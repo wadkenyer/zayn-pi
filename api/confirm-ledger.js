@@ -1,22 +1,22 @@
 // api/confirm-ledger.js — تأكيد تحويل Pi (Admin فقط)
 import { FieldValue } from 'firebase-admin/firestore';
-import { getAdminDb, cors } from './_admin.js';
-
-const ADMIN = process.env.ADMIN_USERNAME || 'wadkenyer';
+import { getAdminDb, cors, verifyAdmin } from './_admin.js';
 
 export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { ledgerId, confirmTxid, callerUsername } = req.body;
-
-  if (!ledgerId || !confirmTxid || !callerUsername) {
-    return res.status(400).json({ error: 'ledgerId و confirmTxid و callerUsername مطلوبة' });
+  // التحقق من هوية Admin عبر Pi Network مباشرة (لا نثق بأي قيمة من الـ body)
+  const adminUsername = await verifyAdmin(req);
+  if (!adminUsername) {
+    return res.status(403).json({ error: 'غير مصرح — Admin فقط' });
   }
 
-  if (callerUsername !== ADMIN) {
-    return res.status(403).json({ error: 'غير مصرح — Admin فقط' });
+  const { ledgerId, confirmTxid } = req.body;
+
+  if (!ledgerId || !confirmTxid) {
+    return res.status(400).json({ error: 'ledgerId و confirmTxid مطلوبان' });
   }
 
   if (!/^[a-fA-F0-9]{8,}/.test(confirmTxid)) {

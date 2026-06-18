@@ -1507,6 +1507,7 @@ const clean = (str) => (typeof DOMPurify !== 'undefined')
 
 // ===== STATE =====
 let currentUser = null;
+let piAccessToken = null;
 let currentGender = 'men';
 let selectedSalon = null;
 let selectedService = null;
@@ -2595,6 +2596,7 @@ window.initPi = async () => {
       }
     });
     currentUser = auth.user;
+    piAccessToken = auth.accessToken;
 
     // ===== تسجيل دخول Firebase بتوكن مشتق من Pi =====
     let fbAuthOk = false;
@@ -3022,7 +3024,7 @@ async function renderOwnerStats() {
 }
 
 // ===== LEDGER (Admin + صالون + زبون) =====
-const ADMIN_USERNAME = 'wadkenyer'; // يطابق ADMIN_USERNAME في Vercel
+const ADMIN_USERNAME = 'wadkenyer'; // لإظهار زر الواجهة فقط — الأمان الحقيقي في الباك إند عبر Pi token
 
 async function loadLedger(filterType = 'all') {
   const list = document.getElementById('admin-ledger-list');
@@ -3044,9 +3046,12 @@ async function loadLedger(filterType = 'all') {
     const body = { callerUsername: currentUser.username };
     if (filterType !== 'all') body.filterType = filterType;
 
+    const headers = { 'Content-Type': 'application/json' };
+    if (piAccessToken) headers['x-pi-token'] = piAccessToken;
+
     const res = await fetch('/api/get-ledger', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body)
     });
     const data = await res.json();
@@ -3107,8 +3112,11 @@ window.confirmLedger = async (ledgerId) => {
   try {
     const res = await fetch('/api/confirm-ledger', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ledgerId, confirmTxid: txid, callerUsername: currentUser.username })
+      headers: {
+        'Content-Type': 'application/json',
+        ...(piAccessToken ? { 'x-pi-token': piAccessToken } : {})
+      },
+      body: JSON.stringify({ ledgerId, confirmTxid: txid })
     });
     const data = await res.json();
     if (data.success) {
