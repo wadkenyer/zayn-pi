@@ -17,6 +17,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // الـ Ledger — يُكتب ويُقرأ فقط عبر Admin API
+    match /ledger/{docId} {
+      allow read, write: if false;
+    }
+
     // حظر كل شيء آخر
     match /{document=**} {
       allow read, write: if false;

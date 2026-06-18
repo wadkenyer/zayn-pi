@@ -39,6 +39,15 @@ export default async function handler(req, res) {
       completedAt: FieldValue.serverTimestamp()
     });
 
+    // إذا كان استرداداً، حدّث مستند الحجز بنتيجة الاسترداد
+    const entry = snap.data();
+    if (entry.type === 'refund_to_customer' && entry.bookingId) {
+      await db.collection('bookings').doc(entry.bookingId).update({
+        refundStatus: 'completed',
+        refundTxid: confirmTxid
+      });
+    }
+
     return res.status(200).json({ success: true, ledgerId });
 
   } catch (error) {

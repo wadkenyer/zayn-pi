@@ -132,7 +132,7 @@ export default async function handler(req, res) {
         const payoutAmount = parseFloat((serviceAmt - commission).toFixed(2));
         if (payoutAmount > 0) {
           const payoutDue = new Date();
-          payoutDue.setDate(payoutDue.getDate() + 7); // 7 أيام
+          payoutDue.setDate(payoutDue.getDate() + 2); // 48 ساعة — نافذة شكاوى جودة قبل التحويل
           await db.collection('ledger').add({
             type: 'payout_to_salon',
             recipientUsername: b.salonId,
