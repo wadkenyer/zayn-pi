@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       }
 
       case 'update-settings': {
-        const allowed = ['name', 'city', 'phone', 'img', 'desc', 'openTime', 'closeTime'];
+        const allowed = ['name', 'city', 'phone', 'img', 'desc', 'openTime', 'closeTime', 'closedDates', 'rating', 'reviewCount'];
         const updates = {};
         for (const key of allowed) {
           if (data?.[key] !== undefined) updates[key] = data[key];

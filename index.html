@@ -1193,6 +1193,16 @@
       </div>
     </div>
 
+    <!-- أيام الإجازة -->
+    <div class="section-title">أيام الإجازة والإغلاق</div>
+    <div style="padding: 0 20px; margin-bottom: 20px;">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input type="date" class="form-input" id="closed-date-input" style="flex:1;">
+        <button onclick="addClosedDate()" style="padding:10px 16px;background:var(--teal);color:#fff;border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;">+ إضافة</button>
+      </div>
+      <div id="closed-dates-list"></div>
+    </div>
+
     <!-- تعديل بيانات الصالون -->
     <div class="section-title">تعديل بيانات الصالون</div>
     <div style="padding: 0 20px; margin-bottom: 20px;">
@@ -1862,6 +1872,15 @@ function generateTimeSlots(isWomen, openTime, closeTime) {
 
 async function loadTimeSlotsForDate(isWomen, openTime, closeTime, salonId, date) {
   generateTimeSlots(isWomen, openTime, closeTime);
+
+  // تحقق من أيام الإجازة أولاً
+  const closedDates = selectedSalon?.closedDates || [];
+  if (closedDates.includes(date)) {
+    document.getElementById('time-slots').innerHTML =
+      '<div style="text-align:center;color:#ef4444;font-weight:700;padding:16px 0;font-size:14px;">🚫 الصالون مغلق في هذا اليوم</div>';
+    return;
+  }
+
   try {
     const res = await fetch('/api/check-slot', {
       method: 'POST',
@@ -2250,6 +2269,7 @@ async function loadOwnerDashboard() {
     salonAvailable = ownerSalonData.available !== false;
 
     document.getElementById('owner-salon-name-header').textContent = ownerSalonData.name;
+    renderClosedDates();
 
     // تعبئة حقول التعديل بالبيانات الحالية
     document.getElementById('edit-salon-name').value = ownerSalonData.name || '';
@@ -2521,6 +2541,63 @@ window.toggleAvailability = async () => {
   } catch(e) {
     showToast('تحقق من الاتصال');
   }
+};
+
+// ===== أيام الإجازة =====
+function renderClosedDates() {
+  const el = document.getElementById('closed-dates-list');
+  if (!el) return;
+  const dates = ownerSalonData.closedDates || [];
+  if (!dates.length) {
+    el.innerHTML = '<div style="color:var(--gray);font-size:13px;text-align:center;padding:8px 0;">لا توجد أيام إجازة مضافة</div>';
+    return;
+  }
+  el.innerHTML = dates.map(d => `
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--card-bg);border-radius:12px;padding:10px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+      <span style="font-weight:700;font-size:14px;">📅 ${d}</span>
+      <button onclick="removeClosedDate('${d}')" style="background:none;border:none;color:#ef4444;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;">×</button>
+    </div>`).join('');
+}
+
+window.addClosedDate = async () => {
+  const input = document.getElementById('closed-date-input');
+  const date = input.value;
+  if (!date) return showToast('اختر تاريخاً أولاً');
+  const today = new Date().toISOString().split('T')[0];
+  if (date <= today) return showToast('اختر تاريخاً في المستقبل');
+  const closedDates = [...(ownerSalonData.closedDates || [])];
+  if (closedDates.includes(date)) return showToast('هذا التاريخ مضاف مسبقاً');
+  closedDates.push(date);
+  closedDates.sort();
+  try {
+    const r = await fetch('/api/save-salon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-settings', data: { closedDates } })
+    });
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ: ' + (d.error || ''));
+    ownerSalonData.closedDates = closedDates;
+    input.value = '';
+    renderClosedDates();
+    showToast('✅ تم إضافة يوم الإجازة');
+  } catch(e) { showToast('خطأ في الحفظ'); }
+};
+
+window.removeClosedDate = async (date) => {
+  const closedDates = (ownerSalonData.closedDates || []).filter(d => d !== date);
+  try {
+    const r = await fetch('/api/save-salon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerUsername: currentUser.username, action: 'update-settings', data: { closedDates } })
+    });
+    const d = await r.json();
+    if (!d.success) return showToast('خطأ في الحذف');
+    ownerSalonData.closedDates = closedDates;
+    renderClosedDates();
+    showToast('✅ تم حذف يوم الإجازة');
+  } catch(e) { showToast('خطأ في الحذف'); }
 };
 
 window.updateSalonData = async () => {
