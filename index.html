@@ -2300,14 +2300,17 @@ async function loadOwnerDashboard() {
     ownerAllBookingsCache = allBookingsArr; // يُغذّي تبويبَي التقويم والإحصائيات
 
     let revenue = 0;
+    let commissionTotal = 0;
     let todayCount = 0;
     const today = new Date().toISOString().split('T')[0];
     let recentHtml = '';
     let completedCount = 0;
 
     allBookingsArr.forEach(b => {
-      if (b.status === 'completed') {
-        revenue += b.servicePrice || 0;
+      if (b.status === 'checkedin' || b.status === 'completed') {
+        const amt = b.servicePrice || b.total || 0;
+        revenue += amt;
+        commissionTotal += b.commission || (amt * 0.1);
         completedCount++;
       }
       if (b.dateTime && b.dateTime.startsWith(today)) todayCount++;
@@ -2335,7 +2338,7 @@ async function loadOwnerDashboard() {
     document.getElementById('owner-revenue-sub').textContent = `↑ ${completedCount} حجوزات مكتملة`;
     document.getElementById('owner-today').textContent = todayCount;
     document.getElementById('owner-pending').textContent = pendingCount;
-    document.getElementById('owner-commission').innerHTML = `${(completedCount * 0.1).toFixed(1)} <span style="font-size:12px;color:var(--teal);">Pi</span>`;
+    document.getElementById('owner-commission').innerHTML = `${commissionTotal.toFixed(2)} <span style="font-size:12px;color:var(--teal);">Pi</span>`;
 
     // حساب التقييم الحقيقي من المراجعات
     const reviewed = allBookingsArr.filter(b => b.isReviewed && b.reviewStars);
@@ -3069,7 +3072,7 @@ async function renderOwnerStats() {
     const ds = d.toISOString().split('T')[0];
     days.push(d.toLocaleDateString('ar-EG', {weekday:'short'}));
     const rev = ownerAllBookingsCache
-      .filter(b => (b.date||b.dateTime||'').split(' ')[0]===ds && b.status==='completed')
+      .filter(b => (b.date||b.dateTime||'').split(' ')[0]===ds && (b.status==='checkedin'||b.status==='completed'))
       .reduce((s,b) => s+(b.servicePrice||0), 0);
     revenues.push(parseFloat(rev.toFixed(2)));
   }
