@@ -371,6 +371,7 @@
   .time-btn:hover { border-color: var(--teal); color: var(--teal); }
   .time-btn.selected { background: var(--teal); border-color: var(--teal); color: #fff; }
   .time-btn.selected-women { background: #C4386B; border-color: #C4386B; color: #fff; }
+  .time-btn:disabled { opacity: 0.35; cursor: not-allowed; background: #f3f4f6; border-color: var(--border); color: var(--gray); text-decoration: line-through; }
 
   /* ===== CONFIRM BTN ===== */
   .confirm-btn {
@@ -1812,9 +1813,10 @@ window.openBookingModal = (salonOrId) => {
   const dateInput = document.getElementById('booking-date');
   dateInput.value = tomorrow.toISOString().split('T')[0];
   dateInput.min = tomorrow.toISOString().split('T')[0];
+  dateInput.onchange = () => loadTimeSlotsForDate(isWomen, salon.openTime, salon.closeTime, salon.id, dateInput.value);
 
-  // Time slots بناءً على أوقات عمل الصالون
-  generateTimeSlots(isWomen, salon.openTime, salon.closeTime);
+  // تحميل الأوقات مع تعطيل المحجوز منها
+  loadTimeSlotsForDate(isWomen, salon.openTime, salon.closeTime, salon.id, dateInput.value);
 
   openModal('booking-modal');
 };
@@ -1837,18 +1839,14 @@ window.selectService = (idx) => {
 function generateTimeSlots(isWomen, openTime, closeTime) {
   const container = document.getElementById('time-slots');
   container.innerHTML = '';
+  selectedTime = null;
 
-  // تحديد ساعات العمل من بيانات الصالون أو القيم الافتراضية
-  const parseHour = (t) => {
-    if (!t) return null;
-    const parts = t.split(':');
-    return parseInt(parts[0]);
-  };
+  const parseHour = (t) => t ? parseInt(t.split(':')[0]) : null;
   const startH = parseHour(openTime) || 9;
   const endH   = parseHour(closeTime) || 21;
 
   for (let h = startH; h <= endH; h++) {
-    const timeStr = `${h}:00`;
+    const timeStr = `${String(h).padStart(2,'0')}:00`;
     const btn = document.createElement('button');
     btn.className = 'time-btn';
     btn.textContent = timeStr;
@@ -1860,6 +1858,25 @@ function generateTimeSlots(isWomen, openTime, closeTime) {
     };
     container.appendChild(btn);
   }
+}
+
+async function loadTimeSlotsForDate(isWomen, openTime, closeTime, salonId, date) {
+  generateTimeSlots(isWomen, openTime, closeTime);
+  try {
+    const res = await fetch('/api/check-slot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ salonId, date, time: '*' })
+    });
+    const data = await res.json();
+    const booked = new Set(data.bookedTimes || []);
+    document.querySelectorAll('.time-btn').forEach(btn => {
+      if (booked.has(btn.textContent)) {
+        btn.disabled = true;
+        btn.title = 'محجوز';
+      }
+    });
+  } catch(e) { /* تبقى الأزرار مفعّلة في حالة الخطأ */ }
 }
 
 function updateSummary() {
