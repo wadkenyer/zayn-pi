@@ -2337,6 +2337,24 @@ async function loadOwnerDashboard() {
     document.getElementById('owner-pending').textContent = pendingCount;
     document.getElementById('owner-commission').innerHTML = `${(completedCount * 0.1).toFixed(1)} <span style="font-size:12px;color:var(--teal);">Pi</span>`;
 
+    // حساب التقييم الحقيقي من المراجعات
+    const reviewed = allBookingsArr.filter(b => b.isReviewed && b.reviewStars);
+    const avgRating = reviewed.length
+      ? (reviewed.reduce((s, b) => s + (b.reviewStars || 0), 0) / reviewed.length).toFixed(1)
+      : '—';
+    document.getElementById('owner-rating').textContent = avgRating;
+    if (reviewed.length) {
+      fetch('/api/save-salon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerUsername: currentUser.username,
+          action: 'update-settings',
+          data: { rating: parseFloat(avgRating), reviewCount: reviewed.length }
+        })
+      }).catch(() => {});
+    }
+
     // Availability
     const toggle = document.getElementById('avail-toggle');
     const label = document.getElementById('avail-label');
